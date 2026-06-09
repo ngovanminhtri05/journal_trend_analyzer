@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../state/state.dart';
 import '../widgets/widgets.dart';
+import 'detail_screen.dart';
 
 /// Search screen (FR-1): a topic input plus the live results list, with
 /// loading / empty / error states. The searched topic also feeds the Trends
@@ -79,7 +80,15 @@ class _SearchScreenState extends State<SearchScreen> {
       case ViewState.success:
         return ListView.builder(
           itemCount: provider.results.length,
-          itemBuilder: (context, i) => PaperCard(work: provider.results[i]),
+          itemBuilder: (context, i) {
+            final work = provider.results[i];
+            return PaperCard(
+              work: work,
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => DetailScreen(work: work)),
+              ),
+            );
+          },
         );
     }
   }
