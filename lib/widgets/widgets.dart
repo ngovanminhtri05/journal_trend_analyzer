@@ -4,4 +4,6 @@
 library;
 
 export 'paper_card.dart';
+export 'ranked_count_list.dart';
 export 'state_views.dart';
+export 'year_bar_chart.dart';
