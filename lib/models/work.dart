@@ -35,7 +35,8 @@ class Work {
 
   factory Work.fromJson(Map<String, dynamic> json) {
     // Title: prefer display_name, fall back to title.
-    final title = (json['display_name'] as String?) ??
+    final title =
+        (json['display_name'] as String?) ??
         (json['title'] as String?) ??
         'Untitled';
 

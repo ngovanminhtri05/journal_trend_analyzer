@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../models/models.dart';
 import '../services/abstract_decoder.dart';
+import '../widgets/widgets.dart';
 
 /// Publication detail screen (FR-2): full metadata, decoded abstract, and an
 /// openable DOI link. Pushed on top of the navigation shell from a result tap.
@@ -19,70 +20,70 @@ class DetailScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Publication')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Text(work.title, style: theme.textTheme.headlineSmall),
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _MetaChip(
-                icon: Icons.calendar_today,
-                label: work.publicationYear?.toString() ?? 'Year n/a',
-              ),
-              _MetaChip(
-                icon: Icons.format_quote,
-                label: '${work.citedByCount} citations',
-              ),
-              if (work.journalName != null)
-                _MetaChip(icon: Icons.menu_book, label: work.journalName!),
-            ],
-          ),
-          const SizedBox(height: 24),
-          _Section(
-            title: 'Authors',
-            child: Text(
-              work.authors.isEmpty ? 'Unknown' : work.authorNames,
+      body: ResponsiveBody(
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            Text(work.title, style: theme.textTheme.headlineSmall),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _MetaChip(
+                  icon: Icons.calendar_today,
+                  label: work.publicationYear?.toString() ?? 'Year n/a',
+                ),
+                _MetaChip(
+                  icon: Icons.format_quote,
+                  label: '${work.citedByCount} citations',
+                ),
+                if (work.journalName != null)
+                  _MetaChip(icon: Icons.menu_book, label: work.journalName!),
+              ],
             ),
-          ),
-          if (doiUrl != null)
+            const SizedBox(height: 24),
             _Section(
-              title: 'DOI',
-              child: InkWell(
-                onTap: () => _openDoi(context, doiUrl),
-                child: Row(
-                  children: [
-                    const Icon(Icons.link, size: 18),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        doiUrl,
-                        style: TextStyle(
-                          color: theme.colorScheme.primary,
-                          decoration: TextDecoration.underline,
+              title: 'Authors',
+              child: Text(work.authors.isEmpty ? 'Unknown' : work.authorNames),
+            ),
+            if (doiUrl != null)
+              _Section(
+                title: 'DOI',
+                child: InkWell(
+                  onTap: () => _openDoi(context, doiUrl),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.link, size: 18),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          doiUrl,
+                          style: TextStyle(
+                            color: theme.colorScheme.primary,
+                            decoration: TextDecoration.underline,
+                          ),
                         ),
                       ),
-                    ),
-                    const Icon(Icons.open_in_new, size: 16),
-                  ],
+                      const Icon(Icons.open_in_new, size: 16),
+                    ],
+                  ),
                 ),
               ),
+            _Section(
+              title: 'Abstract',
+              child: Text(
+                abstractText ?? 'No abstract available for this publication.',
+                style: abstractText == null
+                    ? TextStyle(
+                        fontStyle: FontStyle.italic,
+                        color: theme.colorScheme.outline,
+                      )
+                    : null,
+              ),
             ),
-          _Section(
-            title: 'Abstract',
-            child: Text(
-              abstractText ?? 'No abstract available for this publication.',
-              style: abstractText == null
-                  ? TextStyle(
-                      fontStyle: FontStyle.italic,
-                      color: theme.colorScheme.outline,
-                    )
-                  : null,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

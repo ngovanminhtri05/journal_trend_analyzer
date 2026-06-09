@@ -41,7 +41,8 @@ class TrendProvider extends ChangeNotifier {
       topAuthors = results[2] as List<GroupByItem>;
       topPapers = results[3] as List<Work>;
 
-      final isEmpty = yearCounts.isEmpty &&
+      final isEmpty =
+          yearCounts.isEmpty &&
           topJournals.isEmpty &&
           topAuthors.isEmpty &&
           topPapers.isEmpty;

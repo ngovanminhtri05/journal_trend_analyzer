@@ -14,7 +14,7 @@ export 'openalex_exceptions.dart';
 /// more stable rate limits. The `http.Client` is injectable for testing.
 class OpenAlexService {
   OpenAlexService({http.Client? client, this.mailto})
-      : _client = client ?? http.Client();
+    : _client = client ?? http.Client();
 
   static const String _host = 'api.openalex.org';
   static const String _worksPath = '/works';
@@ -26,20 +26,21 @@ class OpenAlexService {
 
   /// FR-1: free-text search returning a list of works.
   Future<List<Work>> searchWorks(String keyword, {int perPage = 50}) async {
-    final json = await _getJson(_worksUri({
-      'search': keyword,
-      'per-page': '$perPage',
-    }));
+    final json = await _getJson(
+      _worksUri({'search': keyword, 'per-page': '$perPage'}),
+    );
     return _parseWorks(json);
   }
 
   /// FR-4: works ranked by citation count, descending.
   Future<List<Work>> getTopCited(String keyword, {int perPage = 25}) async {
-    final json = await _getJson(_worksUri({
-      'search': keyword,
-      'sort': 'cited_by_count:desc',
-      'per-page': '$perPage',
-    }));
+    final json = await _getJson(
+      _worksUri({
+        'search': keyword,
+        'sort': 'cited_by_count:desc',
+        'per-page': '$perPage',
+      }),
+    );
     return _parseWorks(json);
   }
 
@@ -57,10 +58,9 @@ class OpenAlexService {
 
   /// FR-7: total number of works matching the topic (`meta.count`).
   Future<int> getTotalCount(String keyword) async {
-    final json = await _getJson(_worksUri({
-      'search': keyword,
-      'per-page': '1',
-    }));
+    final json = await _getJson(
+      _worksUri({'search': keyword, 'per-page': '1'}),
+    );
     final meta = json['meta'];
     if (meta is! Map || meta['count'] is! num) {
       throw const ParseException('Missing meta.count in response.');
@@ -69,10 +69,9 @@ class OpenAlexService {
   }
 
   Future<List<GroupByItem>> _groupBy(String keyword, String dimension) async {
-    final json = await _getJson(_worksUri({
-      'search': keyword,
-      'group_by': dimension,
-    }));
+    final json = await _getJson(
+      _worksUri({'search': keyword, 'group_by': dimension}),
+    );
     final groups = json['group_by'];
     if (groups is! List) {
       throw const ParseException('Missing group_by array in response.');

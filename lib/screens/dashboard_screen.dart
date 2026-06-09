@@ -99,15 +99,16 @@ class _DashboardContent extends StatelessWidget {
               spacing: spacing,
               runSpacing: spacing,
               children: [
-                for (final card in cards)
-                  SizedBox(width: width, child: card),
+                for (final card in cards) SizedBox(width: width, child: card),
               ],
             );
           },
         ),
         const SizedBox(height: 24),
-        Text('Most influential paper',
-            style: Theme.of(context).textTheme.titleMedium),
+        Text(
+          'Most influential paper',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
         const SizedBox(height: 8),
         if (summary.mostInfluential != null)
           PaperCard(

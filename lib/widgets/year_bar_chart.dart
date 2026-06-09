@@ -24,8 +24,10 @@ class YearBarChart extends StatelessWidget {
       );
     }
 
-    final maxCount =
-        years.map((e) => e.count).reduce((a, b) => a > b ? a : b).toDouble();
+    final maxCount = years
+        .map((e) => e.count)
+        .reduce((a, b) => a > b ? a : b)
+        .toDouble();
     final theme = Theme.of(context);
 
     return SizedBox(
@@ -43,10 +45,12 @@ class YearBarChart extends StatelessWidget {
             ),
           ),
           titlesData: FlTitlesData(
-            topTitles:
-                const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            rightTitles:
-                const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            topTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            rightTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
             leftTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
@@ -55,8 +59,10 @@ class YearBarChart extends StatelessWidget {
                   if (value != value.roundToDouble()) {
                     return const SizedBox.shrink();
                   }
-                  return Text(value.toInt().toString(),
-                      style: theme.textTheme.labelSmall);
+                  return Text(
+                    value.toInt().toString(),
+                    style: theme.textTheme.labelSmall,
+                  );
                 },
               ),
             ),
@@ -66,11 +72,15 @@ class YearBarChart extends StatelessWidget {
                 reservedSize: 28,
                 getTitlesWidget: (value, meta) {
                   final i = value.toInt();
-                  if (i < 0 || i >= years.length) return const SizedBox.shrink();
+                  if (i < 0 || i >= years.length) {
+                    return const SizedBox.shrink();
+                  }
                   return Padding(
                     padding: const EdgeInsets.only(top: 4),
-                    child: Text(years[i].keyDisplayName,
-                        style: theme.textTheme.labelSmall),
+                    child: Text(
+                      years[i].keyDisplayName,
+                      style: theme.textTheme.labelSmall,
+                    ),
                   );
                 },
               ),
@@ -102,9 +112,7 @@ class YearBarChart extends StatelessWidget {
   /// Parses year keys, drops unparseable ones, sorts ascending, and keeps the
   /// most recent [maxYears].
   List<GroupByItem> _orderedYears() {
-    final parsed = data
-        .where((e) => int.tryParse(e.key) != null)
-        .toList()
+    final parsed = data.where((e) => int.tryParse(e.key) != null).toList()
       ..sort((a, b) => int.parse(a.key).compareTo(int.parse(b.key)));
     if (parsed.length <= maxYears) return parsed;
     return parsed.sublist(parsed.length - maxYears);

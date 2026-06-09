@@ -29,8 +29,11 @@ class PaperCard extends StatelessWidget {
           children: [
             const SizedBox(height: 4),
             if (work.journalName != null)
-              Text(work.journalName!,
-                  maxLines: 1, overflow: TextOverflow.ellipsis),
+              Text(
+                work.journalName!,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             const SizedBox(height: 4),
             Row(
               children: [

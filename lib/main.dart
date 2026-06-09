@@ -36,10 +36,7 @@ class JournalTrendApp extends StatelessWidget {
       child: MaterialApp(
         title: 'Journal Trend Analyzer',
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          colorSchemeSeed: Colors.indigo,
-          useMaterial3: true,
-        ),
+        theme: ThemeData(colorSchemeSeed: Colors.indigo, useMaterial3: true),
         home: const HomeShell(),
       ),
     );

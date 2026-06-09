@@ -16,7 +16,8 @@ class GroupByItem {
     return GroupByItem(
       key: (json['key'] ?? '').toString(),
       keyDisplayName:
-          (json['key_display_name'] as String?) ?? (json['key'] ?? '').toString(),
+          (json['key_display_name'] as String?) ??
+          (json['key'] ?? '').toString(),
       count: (json['count'] as num?)?.toInt() ?? 0,
     );
   }

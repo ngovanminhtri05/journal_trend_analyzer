@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../widgets/widgets.dart';
 import 'dashboard_screen.dart';
 import 'search_screen.dart';
 import 'trend_screen.dart';
@@ -29,9 +30,11 @@ class _HomeShellState extends State<HomeShell> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(_tabs[_index].label)),
-      body: IndexedStack(
-        index: _index,
-        children: [for (final tab in _tabs) tab.screen],
+      body: ResponsiveBody(
+        child: IndexedStack(
+          index: _index,
+          children: [for (final tab in _tabs) tab.screen],
+        ),
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,

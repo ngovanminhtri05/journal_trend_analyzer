@@ -16,10 +16,14 @@ class NetworkException extends OpenAlexException {
 
 /// OpenAlex returned HTTP 429 (polite-pool / rate limit exceeded).
 class RateLimitException extends OpenAlexException {
-  const RateLimitException([super.message = 'Rate limit exceeded. Try again shortly.']);
+  const RateLimitException([
+    super.message = 'Rate limit exceeded. Try again shortly.',
+  ]);
 }
 
 /// The response body could not be decoded into the expected shape.
 class ParseException extends OpenAlexException {
-  const ParseException([super.message = 'Could not parse the OpenAlex response.']);
+  const ParseException([
+    super.message = 'Could not parse the OpenAlex response.',
+  ]);
 }
