@@ -15,7 +15,9 @@ void main() {
 
     await tester.pumpWidget(JournalTrendApp(service: service));
 
-    expect(find.text('Journal Trend Analyzer'), findsOneWidget);
-    expect(find.byType(MaterialApp), findsOneWidget);
+    // The navigation shell renders its three tabs.
+    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.text('Trends'), findsWidgets);
+    expect(find.text('Dashboard'), findsWidgets);
   });
 }

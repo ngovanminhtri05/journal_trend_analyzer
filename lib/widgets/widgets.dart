@@ -1,5 +1,7 @@
 /// Reusable widgets layer.
 ///
-/// Holds shared UI components (paper card, stat card, charts, state views).
-/// Populated in Phase 3.
+/// Shared UI components: state views, paper card, stat card, charts.
 library;
+
+export 'paper_card.dart';
+export 'state_views.dart';

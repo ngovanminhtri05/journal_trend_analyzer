@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'screens/home_shell.dart';
 import 'services/openalex_service.dart';
 import 'state/state.dart';
 
@@ -39,28 +40,7 @@ class JournalTrendApp extends StatelessWidget {
           colorSchemeSeed: Colors.indigo,
           useMaterial3: true,
         ),
-        home: const _PlaceholderHome(),
-      ),
-    );
-  }
-}
-
-/// Temporary landing screen until the navigation shell lands in Task 3.1.
-class _PlaceholderHome extends StatelessWidget {
-  const _PlaceholderHome();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Journal Trend Analyzer')),
-      body: const Center(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Text(
-            'Setup complete. Screens arrive in Phase 3.',
-            textAlign: TextAlign.center,
-          ),
-        ),
+        home: const HomeShell(),
       ),
     );
   }
