@@ -1,5 +1,9 @@
 /// Data-access layer.
 ///
-/// Holds `OpenAlexService` (HTTP calls + JSON parsing) and typed exceptions
-/// (network / parse / rate-limit). Populated in Phase 1.
+/// `OpenAlexService` (HTTP + JSON parsing), typed exceptions, and the abstract
+/// inverted-index decoder.
 library;
+
+export 'abstract_decoder.dart';
+export 'openalex_exceptions.dart';
+export 'openalex_service.dart';
