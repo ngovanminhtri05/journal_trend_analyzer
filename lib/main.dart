@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'screens/home_shell.dart';
 import 'services/openalex_service.dart';
 import 'state/state.dart';
+import 'theme/app_theme.dart';
 
 void main() {
   runApp(const JournalTrendApp());
@@ -53,7 +54,7 @@ class _JournalTrendAppState extends State<JournalTrendApp> {
       child: MaterialApp(
         title: 'Journal Trend Analyzer',
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(colorSchemeSeed: Colors.indigo, useMaterial3: true),
+        theme: AppTheme.build(),
         home: const HomeShell(),
       ),
     );

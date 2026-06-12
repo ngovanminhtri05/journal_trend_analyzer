@@ -60,7 +60,7 @@ class DetailScreen extends StatelessWidget {
                         child: Text(
                           doiUrl,
                           style: TextStyle(
-                            color: theme.colorScheme.primary,
+                            color: theme.colorScheme.secondary,
                             decoration: TextDecoration.underline,
                           ),
                         ),

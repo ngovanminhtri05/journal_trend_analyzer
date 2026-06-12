@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../models/models.dart';
+import '../theme/app_theme.dart';
 
-/// Compact card for a publication in a list (FR-1): title, year, citations,
-/// and journal. Optional [rank] shows a position badge (used by top-cited
-/// lists); optional [onTap] navigates to the detail screen.
+/// Compact card for a publication in a list (FR-1): title, journal, year and
+/// citation count. Optional [rank] shows a mono position number (used by
+/// top-cited lists); optional [onTap] navigates to the detail screen.
 class PaperCard extends StatelessWidget {
   const PaperCard({super.key, required this.work, this.onTap, this.rank});
 
@@ -14,62 +15,75 @@ class PaperCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final year = work.publicationYear?.toString() ?? 'n/a';
 
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      child: ListTile(
-        onTap: onTap,
-        leading: rank != null
-            ? CircleAvatar(child: Text('$rank'))
-            : const Icon(Icons.article_outlined),
-        title: Text(work.title, maxLines: 2, overflow: TextOverflow.ellipsis),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 4),
-            if (work.journalName != null)
-              Text(
-                work.journalName!,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            const SizedBox(height: 4),
-            Row(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: Card(
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _Chip(icon: Icons.calendar_today, label: year),
-                const SizedBox(width: 8),
-                _Chip(
-                  icon: Icons.format_quote,
-                  label: '${work.citedByCount} citations',
+                if (rank != null)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 12, top: 2),
+                    child: Text(
+                      rank!.toString().padLeft(2, '0'),
+                      style: AppTheme.mono(
+                        context,
+                        size: 13,
+                        color: AppTheme.muted,
+                      ),
+                    ),
+                  ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        work.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleMedium,
+                      ),
+                      if (work.journalName != null) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          work.journalName!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: AppTheme.muted,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 8),
+                      Text(
+                        '$year   ·   ${work.citedByCount} citations',
+                        style: AppTheme.mono(context, size: 11),
+                      ),
+                    ],
+                  ),
                 ),
+                if (onTap != null)
+                  const Padding(
+                    padding: EdgeInsets.only(left: 8),
+                    child: Icon(
+                      Icons.chevron_right,
+                      size: 18,
+                      color: AppTheme.muted,
+                    ),
+                  ),
               ],
             ),
-          ],
+          ),
         ),
-        trailing: onTap != null ? const Icon(Icons.chevron_right) : null,
-        isThreeLine: true,
       ),
-    );
-  }
-}
-
-class _Chip extends StatelessWidget {
-  const _Chip({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final style = Theme.of(context).textTheme.labelSmall;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 14),
-        const SizedBox(width: 4),
-        Text(label, style: style),
-      ],
     );
   }
 }

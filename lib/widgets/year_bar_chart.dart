@@ -54,13 +54,13 @@ class YearBarChart extends StatelessWidget {
             leftTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
-                reservedSize: 32,
+                reservedSize: 44,
                 getTitlesWidget: (value, meta) {
-                  if (value != value.roundToDouble()) {
+                  if (value != meta.max && value != value.roundToDouble()) {
                     return const SizedBox.shrink();
                   }
                   return Text(
-                    value.toInt().toString(),
+                    _compact(value),
                     style: theme.textTheme.labelSmall,
                   );
                 },
@@ -107,6 +107,18 @@ class YearBarChart extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// Formats an axis value compactly: 1500 → "1.5k", 2000000 → "2M".
+  String _compact(double value) {
+    final v = value.round();
+    if (v >= 1000000) {
+      return '${(v / 1000000).toStringAsFixed(v % 1000000 == 0 ? 0 : 1)}M';
+    }
+    if (v >= 1000) {
+      return '${(v / 1000).toStringAsFixed(v % 1000 == 0 ? 0 : 1)}k';
+    }
+    return '$v';
   }
 
   /// Parses year keys, drops unparseable ones, sorts ascending, and keeps the

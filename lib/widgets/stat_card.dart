@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
-/// Compact insight card for the dashboard (FR-7): an icon, a label, and a
-/// prominent value.
+import '../theme/app_theme.dart';
+
+/// Compact insight card for the dashboard (FR-7): a small label, a prominent
+/// editorial value, and a muted icon. Flat surface (1px border, no shadow).
 class StatCard extends StatelessWidget {
   const StatCard({
     super.key,
@@ -19,24 +21,30 @@ class StatCard extends StatelessWidget {
     final theme = Theme.of(context);
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: theme.colorScheme.primary),
-            const SizedBox(height: 12),
+            Row(
+              children: [
+                Icon(icon, size: 16, color: AppTheme.muted),
+                const Spacer(),
+              ],
+            ),
+            const SizedBox(height: 16),
             Text(
               value,
               style: theme.textTheme.titleLarge,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 6),
             Text(
-              label,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.outline,
+              label.toUpperCase(),
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: AppTheme.muted,
+                letterSpacing: 0.5,
               ),
             ),
           ],

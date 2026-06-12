@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/models.dart';
+import '../theme/app_theme.dart';
 
 /// Ranked list of `group_by` buckets (FR-5 journals, FR-6 authors).
 ///
@@ -56,7 +57,10 @@ class _RankRow extends StatelessWidget {
         children: [
           SizedBox(
             width: 24,
-            child: Text('$rank.', style: theme.textTheme.labelLarge),
+            child: Text(
+              '$rank',
+              style: AppTheme.mono(context, size: 13, color: AppTheme.muted),
+            ),
           ),
           Expanded(
             child: Column(
@@ -80,7 +84,10 @@ class _RankRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          Text('${item.count}', style: theme.textTheme.labelMedium),
+          Text(
+            '${item.count}',
+            style: AppTheme.mono(context, size: 12, color: AppTheme.ink),
+          ),
         ],
       ),
     );
