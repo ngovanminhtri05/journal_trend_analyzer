@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../state/state.dart';
 import '../widgets/widgets.dart';
 import 'detail_screen.dart';
+import 'topic_sync.dart';
 
 /// Trend analysis screen (FR-3/4/5/6): year chart, top journals, top authors
 /// and top-cited papers. Auto-loads the topic searched on the Search tab
@@ -19,11 +20,12 @@ class TrendScreen extends StatelessWidget {
     final provider = context.watch<TrendProvider>();
 
     // Keep the analysis in sync with the shared topic.
-    if (topic.isNotEmpty && topic != provider.lastQuery) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (context.mounted) context.read<TrendProvider>().load(topic);
-      });
-    }
+    syncSharedTopic(
+      context: context,
+      topic: topic,
+      lastLoaded: provider.lastQuery,
+      load: (t) => context.read<TrendProvider>().load(t),
+    );
 
     if (topic.isEmpty && provider.state == ViewState.idle) {
       return const EmptyView(

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../state/state.dart';
 import '../widgets/widgets.dart';
 import 'detail_screen.dart';
+import 'topic_sync.dart';
 
 /// Research dashboard screen (FR-7): six aggregate insights for the topic
 /// searched on the Search tab (`SearchProvider.lastQuery`).
@@ -15,11 +16,12 @@ class DashboardScreen extends StatelessWidget {
     final topic = context.watch<SearchProvider>().lastQuery;
     final provider = context.watch<DashboardProvider>();
 
-    if (topic.isNotEmpty && topic != provider.lastQuery) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (context.mounted) context.read<DashboardProvider>().load(topic);
-      });
-    }
+    syncSharedTopic(
+      context: context,
+      topic: topic,
+      lastLoaded: provider.lastQuery,
+      load: (t) => context.read<DashboardProvider>().load(t),
+    );
 
     if (topic.isEmpty && provider.state == ViewState.idle) {
       return const EmptyView(

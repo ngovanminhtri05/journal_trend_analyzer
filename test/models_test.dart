@@ -15,14 +15,20 @@ void main() {
       'cited_by_count': 1500,
       'ids': {'doi': 'https://doi.org/10.1234/abc'},
       'primary_location': {
-        'source': {'id': 'https://openalex.org/S456', 'display_name': 'Nature'}
+        'source': {'id': 'https://openalex.org/S456', 'display_name': 'Nature'},
       },
       'authorships': [
         {
-          'author': {'id': 'https://openalex.org/A1', 'display_name': 'Jane Doe'}
+          'author': {
+            'id': 'https://openalex.org/A1',
+            'display_name': 'Jane Doe',
+          },
         },
         {
-          'author': {'id': 'https://openalex.org/A2', 'display_name': 'John Smith'}
+          'author': {
+            'id': 'https://openalex.org/A2',
+            'display_name': 'John Smith',
+          },
         },
       ],
       'abstract_inverted_index': {

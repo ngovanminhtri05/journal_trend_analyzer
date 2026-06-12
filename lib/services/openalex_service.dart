@@ -18,6 +18,7 @@ class OpenAlexService {
 
   static const String _host = 'api.openalex.org';
   static const String _worksPath = '/works';
+  static const Duration _timeout = Duration(seconds: 15);
 
   final http.Client _client;
 
@@ -95,12 +96,15 @@ class OpenAlexService {
   Future<Map<String, dynamic>> _getJson(Uri uri) async {
     final http.Response response;
     try {
-      response = await _client.get(uri);
+      response = await _client.get(uri).timeout(_timeout);
     } on OpenAlexException {
       rethrow;
     } catch (e) {
-      // SocketException, http.ClientException, timeouts, etc.
-      throw NetworkException('Network request failed: $e');
+      // SocketException, http.ClientException, TimeoutException, etc. Keep the
+      // technical detail off the UI; surface a friendly, actionable message.
+      throw NetworkException(
+        'Could not reach OpenAlex. Please check your connection and retry.',
+      );
     }
 
     if (response.statusCode == 429) {
@@ -121,8 +125,8 @@ class OpenAlexService {
       return decoded;
     } on ParseException {
       rethrow;
-    } catch (e) {
-      throw ParseException('Invalid JSON: $e');
+    } catch (_) {
+      throw const ParseException();
     }
   }
 

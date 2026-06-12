@@ -36,30 +36,40 @@ String _groupBody(List<Map<String, dynamic>> groups) {
 
 void main() {
   group('searchWorks', () {
-    test('hits /works with search, per-page and mailto, parses results', () async {
-      final captured = <Uri>[];
-      final service = _serviceReturning(
-        http.Response(
-          _worksBody([
-            {'display_name': 'Paper A', 'publication_year': 2020, 'cited_by_count': 5},
-          ], count: 1),
-          200,
-        ),
-        captured: captured,
-      );
+    test(
+      'hits /works with search, per-page and mailto, parses results',
+      () async {
+        final captured = <Uri>[];
+        final service = _serviceReturning(
+          http.Response(
+            _worksBody([
+              {
+                'display_name': 'Paper A',
+                'publication_year': 2020,
+                'cited_by_count': 5,
+              },
+            ], count: 1),
+            200,
+          ),
+          captured: captured,
+        );
 
-      final works = await service.searchWorks('machine learning', perPage: 50);
+        final works = await service.searchWorks(
+          'machine learning',
+          perPage: 50,
+        );
 
-      expect(works, isA<List<Work>>());
-      expect(works.single.title, 'Paper A');
+        expect(works, isA<List<Work>>());
+        expect(works.single.title, 'Paper A');
 
-      final uri = captured.single;
-      expect(uri.host, 'api.openalex.org');
-      expect(uri.path, '/works');
-      expect(uri.queryParameters['search'], 'machine learning');
-      expect(uri.queryParameters['per-page'], '50');
-      expect(uri.queryParameters['mailto'], 'test@example.com');
-    });
+        final uri = captured.single;
+        expect(uri.host, 'api.openalex.org');
+        expect(uri.path, '/works');
+        expect(uri.queryParameters['search'], 'machine learning');
+        expect(uri.queryParameters['per-page'], '50');
+        expect(uri.queryParameters['mailto'], 'test@example.com');
+      },
+    );
   });
 
   group('getTopCited', () {
@@ -78,26 +88,29 @@ void main() {
   });
 
   group('group_by helpers', () {
-    test('groupByYear uses group_by=publication_year and parses buckets', () async {
-      final captured = <Uri>[];
-      final service = _serviceReturning(
-        http.Response(
-          _groupBody([
-            {'key': '2020', 'key_display_name': '2020', 'count': 12},
-            {'key': '2021', 'key_display_name': '2021', 'count': 8},
-          ]),
-          200,
-        ),
-        captured: captured,
-      );
+    test(
+      'groupByYear uses group_by=publication_year and parses buckets',
+      () async {
+        final captured = <Uri>[];
+        final service = _serviceReturning(
+          http.Response(
+            _groupBody([
+              {'key': '2020', 'key_display_name': '2020', 'count': 12},
+              {'key': '2021', 'key_display_name': '2021', 'count': 8},
+            ]),
+            200,
+          ),
+          captured: captured,
+        );
 
-      final groups = await service.groupByYear('ai');
+        final groups = await service.groupByYear('ai');
 
-      expect(captured.single.queryParameters['group_by'], 'publication_year');
-      expect(groups, isA<List<GroupByItem>>());
-      expect(groups.length, 2);
-      expect(groups.first.count, 12);
-    });
+        expect(captured.single.queryParameters['group_by'], 'publication_year');
+        expect(groups, isA<List<GroupByItem>>());
+        expect(groups.length, 2);
+        expect(groups.first.count, 12);
+      },
+    );
 
     test('groupByJournal uses group_by=primary_location.source.id', () async {
       final captured = <Uri>[];
@@ -107,8 +120,10 @@ void main() {
       );
 
       await service.groupByJournal('ai');
-      expect(captured.single.queryParameters['group_by'],
-          'primary_location.source.id');
+      expect(
+        captured.single.queryParameters['group_by'],
+        'primary_location.source.id',
+      );
     });
 
     test('groupByAuthor uses group_by=authorships.author.id', () async {
@@ -119,8 +134,10 @@ void main() {
       );
 
       await service.groupByAuthor('ai');
-      expect(captured.single.queryParameters['group_by'],
-          'authorships.author.id');
+      expect(
+        captured.single.queryParameters['group_by'],
+        'authorships.author.id',
+      );
     });
   });
 
@@ -144,28 +161,23 @@ void main() {
 
     test('5xx throws NetworkException', () async {
       final service = _serviceReturning(http.Response('boom', 500));
-      expect(
-        () => service.searchWorks('ai'),
-        throwsA(isA<NetworkException>()),
-      );
+      expect(() => service.searchWorks('ai'), throwsA(isA<NetworkException>()));
     });
 
     test('invalid JSON throws ParseException', () async {
       final service = _serviceReturning(http.Response('not json', 200));
-      expect(
-        () => service.searchWorks('ai'),
-        throwsA(isA<ParseException>()),
-      );
+      expect(() => service.searchWorks('ai'), throwsA(isA<ParseException>()));
     });
 
     test('client/transport failure throws NetworkException', () async {
-      final client = MockClient((_) async => throw http.ClientException('down'));
-      final service =
-          OpenAlexService(client: client, mailto: 'test@example.com');
-      expect(
-        () => service.searchWorks('ai'),
-        throwsA(isA<NetworkException>()),
+      final client = MockClient(
+        (_) async => throw http.ClientException('down'),
       );
+      final service = OpenAlexService(
+        client: client,
+        mailto: 'test@example.com',
+      );
+      expect(() => service.searchWorks('ai'), throwsA(isA<NetworkException>()));
     });
   });
 }

@@ -11,27 +11,44 @@ void main() {
 
 /// Root app widget.
 ///
-/// Sets up the shared [OpenAlexService] and the three screen providers. The
-/// service can be injected for tests. The home screen is a placeholder shell
-/// that Task 3.1 replaces with the real BottomNavigationBar navigation.
-class JournalTrendApp extends StatelessWidget {
+/// Owns a single shared [OpenAlexService] (created once and disposed when the
+/// app is torn down) plus the three screen providers. The service can be
+/// injected for tests.
+class JournalTrendApp extends StatefulWidget {
   const JournalTrendApp({super.key, this.service});
 
   /// Polite-pool contact sent on every OpenAlex request.
-  static const String _mailto = 'ngovanminhtri05@gmail.com';
+  static const String mailto = 'ngovanminhtri05@gmail.com';
 
+  /// Optional injected service (tests). When null, one is created internally.
   final OpenAlexService? service;
 
   @override
-  Widget build(BuildContext context) {
-    final svc = service ?? OpenAlexService(mailto: _mailto);
+  State<JournalTrendApp> createState() => _JournalTrendAppState();
+}
 
+class _JournalTrendAppState extends State<JournalTrendApp> {
+  late final OpenAlexService _service =
+      widget.service ?? OpenAlexService(mailto: JournalTrendApp.mailto);
+
+  /// Only dispose a service we created ourselves; an injected one is owned by
+  /// the test that provided it.
+  bool get _ownsService => widget.service == null;
+
+  @override
+  void dispose() {
+    if (_ownsService) _service.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        Provider<OpenAlexService>.value(value: svc),
-        ChangeNotifierProvider(create: (_) => SearchProvider(svc)),
-        ChangeNotifierProvider(create: (_) => TrendProvider(svc)),
-        ChangeNotifierProvider(create: (_) => DashboardProvider(svc)),
+        Provider<OpenAlexService>.value(value: _service),
+        ChangeNotifierProvider(create: (_) => SearchProvider(_service)),
+        ChangeNotifierProvider(create: (_) => TrendProvider(_service)),
+        ChangeNotifierProvider(create: (_) => DashboardProvider(_service)),
       ],
       child: MaterialApp(
         title: 'Journal Trend Analyzer',

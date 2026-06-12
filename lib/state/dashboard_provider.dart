@@ -76,8 +76,8 @@ class DashboardProvider extends ChangeNotifier {
     } on OpenAlexException catch (e) {
       errorMessage = e.message;
       state = ViewState.error;
-    } catch (e) {
-      errorMessage = 'Unexpected error: $e';
+    } catch (_) {
+      errorMessage = 'Something went wrong. Please try again.';
       state = ViewState.error;
     }
     notifyListeners();

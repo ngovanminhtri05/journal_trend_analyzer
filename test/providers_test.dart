@@ -9,62 +9,69 @@ import 'package:journal_trend_analyzer/state/state.dart';
 /// MockClient that routes OpenAlex requests by their `group_by`/`sort` params.
 http.Client _router({bool empty = false}) {
   String works() => jsonEncode({
-        'meta': {'count': empty ? 0 : 1234},
-        'results': empty
-            ? const []
-            : [
-                {
-                  'display_name': 'High Impact Paper',
-                  'publication_year': 2021,
-                  'cited_by_count': 900,
-                },
-                {
-                  'display_name': 'Second Paper',
-                  'publication_year': 2020,
-                  'cited_by_count': 100,
-                },
-              ],
-      });
+    'meta': {'count': empty ? 0 : 1234},
+    'results': empty
+        ? const []
+        : [
+            {
+              'display_name': 'High Impact Paper',
+              'publication_year': 2021,
+              'cited_by_count': 900,
+            },
+            {
+              'display_name': 'Second Paper',
+              'publication_year': 2020,
+              'cited_by_count': 100,
+            },
+          ],
+  });
 
   String group(List<Map<String, dynamic>> g) => jsonEncode({
-        'meta': {'count': 0},
-        'results': const [],
-        'group_by': empty ? const [] : g,
-      });
+    'meta': {'count': 0},
+    'results': const [],
+    'group_by': empty ? const [] : g,
+  });
 
   return MockClient((req) async {
     final gb = req.url.queryParameters['group_by'];
     switch (gb) {
       case 'publication_year':
         return http.Response(
-            group([
-              {'key': '2021', 'key_display_name': '2021', 'count': 25},
-              {'key': '2020', 'key_display_name': '2020', 'count': 10},
-            ]),
-            200);
+          group([
+            {'key': '2021', 'key_display_name': '2021', 'count': 25},
+            {'key': '2020', 'key_display_name': '2020', 'count': 10},
+          ]),
+          200,
+        );
       case 'primary_location.source.id':
         return http.Response(
-            group([
-              {'key': 'S1', 'key_display_name': 'Nature', 'count': 30},
-            ]),
-            200);
+          group([
+            {'key': 'S1', 'key_display_name': 'Nature', 'count': 30},
+          ]),
+          200,
+        );
       case 'authorships.author.id':
         return http.Response(
-            group([
-              {'key': 'A1', 'key_display_name': 'Jane Doe', 'count': 12},
-            ]),
-            200);
+          group([
+            {'key': 'A1', 'key_display_name': 'Jane Doe', 'count': 12},
+          ]),
+          200,
+        );
       default:
         return http.Response(works(), 200);
     }
   });
 }
 
-OpenAlexService _service({bool empty = false}) =>
-    OpenAlexService(client: _router(empty: empty), mailto: 't@e.com');
+OpenAlexService _service({bool empty = false}) => OpenAlexService(
+  client: _router(empty: empty),
+  mailto: 't@e.com',
+);
 
 OpenAlexService _failing(int status) => OpenAlexService(
-    client: MockClient((_) async => http.Response('x', status)), mailto: 't@e.com');
+  client: MockClient((_) async => http.Response('x', status)),
+  mailto: 't@e.com',
+);
 
 void main() {
   group('SearchProvider', () {
