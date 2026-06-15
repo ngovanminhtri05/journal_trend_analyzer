@@ -97,8 +97,13 @@ class DetailScreen extends StatelessWidget {
 
   Future<void> _openDoi(BuildContext context, String url) async {
     final messenger = ScaffoldMessenger.of(context);
-    final uri = Uri.parse(url);
-    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    bool ok = false;
+    try {
+      final uri = Uri.parse(url);
+      ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      ok = false; // malformed URI or no handler available on the device
+    }
     if (!ok) {
       messenger.showSnackBar(
         const SnackBar(content: Text('Could not open the DOI link.')),

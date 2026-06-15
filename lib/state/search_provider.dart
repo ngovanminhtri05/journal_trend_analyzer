@@ -16,10 +16,15 @@ class SearchProvider extends ChangeNotifier {
   String lastQuery = '';
   List<Work> results = const [];
 
+  /// Monotonic token used to discard responses from superseded requests, so a
+  /// slow earlier search cannot overwrite the result of a newer one.
+  int _requestId = 0;
+
   Future<void> search(String keyword) async {
     final query = keyword.trim();
     if (query.isEmpty) return;
 
+    final requestId = ++_requestId;
     lastQuery = query;
     state = ViewState.loading;
     errorMessage = null;
@@ -27,12 +32,15 @@ class SearchProvider extends ChangeNotifier {
 
     try {
       final works = await _service.searchWorks(query);
+      if (requestId != _requestId) return; // a newer search has taken over
       results = works;
       state = works.isEmpty ? ViewState.empty : ViewState.success;
     } on OpenAlexException catch (e) {
+      if (requestId != _requestId) return;
       errorMessage = e.message;
       state = ViewState.error;
     } catch (_) {
+      if (requestId != _requestId) return;
       errorMessage = 'Something went wrong. Please try again.';
       state = ViewState.error;
     }

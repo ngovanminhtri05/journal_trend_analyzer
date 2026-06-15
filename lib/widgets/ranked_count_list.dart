@@ -23,7 +23,13 @@ class RankedCountList extends StatelessWidget {
     }
 
     final sorted = [...items]..sort((a, b) => b.count.compareTo(a.count));
-    final top = sorted.take(limit).toList();
+    final top = (limit > 0 ? sorted.take(limit) : sorted).toList();
+    if (top.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 8),
+        child: Text('No data available.'),
+      );
+    }
     final maxCount = top.first.count;
 
     return Column(
