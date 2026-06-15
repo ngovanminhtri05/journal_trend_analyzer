@@ -1,7 +1,7 @@
 # CodeRabbit configuration — https://docs.coderabbit.ai/guides/configure-coderabbit
 language: en-US
 reviews:
-  profile: chill
+  profile: assertive
   high_level_summary: true
   review_status: true
   poem: false
