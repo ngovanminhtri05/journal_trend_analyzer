@@ -51,6 +51,7 @@ class _JournalTrendAppState extends State<JournalTrendApp> {
         ChangeNotifierProvider(create: (_) => SearchProvider(_service)),
         ChangeNotifierProvider(create: (_) => TrendProvider(_service)),
         ChangeNotifierProvider(create: (_) => DashboardProvider(_service)),
+        ChangeNotifierProvider(create: (_) => ComparisonProvider(_service)),
       ],
       child: MaterialApp(
         title: 'Journal Trend Analyzer',

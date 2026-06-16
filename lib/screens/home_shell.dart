@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../widgets/widgets.dart';
+import 'comparison_screen.dart';
 import 'dashboard_screen.dart';
 import 'search_screen.dart';
 import 'trend_screen.dart';
@@ -23,6 +24,7 @@ class _HomeShellState extends State<HomeShell> {
   static const _tabs = <_TabConfig>[
     _TabConfig('Search', Icons.search, SearchScreen()),
     _TabConfig('Trends', Icons.show_chart, TrendScreen()),
+    _TabConfig('Compare', Icons.compare_arrows, ComparisonScreen()),
     _TabConfig('Dashboard', Icons.dashboard, DashboardScreen()),
   ];
 
