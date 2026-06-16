@@ -15,26 +15,31 @@ class TrendProvider extends ChangeNotifier {
   String? errorMessage;
   String lastQuery = '';
 
+  /// Taxonomy filter clauses (FR-13) applied to the last load; replayed by
+  /// [retry].
+  List<String> lastFilters = const [];
+
   List<GroupByItem> yearCounts = const [];
   List<GroupByItem> topJournals = const [];
   List<GroupByItem> topAuthors = const [];
   List<Work> topPapers = const [];
 
-  Future<void> load(String keyword) async {
+  Future<void> load(String keyword, {List<String> filters = const []}) async {
     final query = keyword.trim();
     if (query.isEmpty) return;
 
     lastQuery = query;
+    lastFilters = filters;
     state = ViewState.loading;
     errorMessage = null;
     notifyListeners();
 
     try {
       final results = await Future.wait([
-        _service.groupByYear(query),
-        _service.groupByJournal(query),
-        _service.groupByAuthor(query),
-        _service.getTopCited(query),
+        _service.groupByYear(query, filters: filters),
+        _service.groupByJournal(query, filters: filters),
+        _service.groupByAuthor(query, filters: filters),
+        _service.getTopCited(query, filters: filters),
       ]);
       yearCounts = results[0] as List<GroupByItem>;
       topJournals = results[1] as List<GroupByItem>;
@@ -57,5 +62,5 @@ class TrendProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> retry() => load(lastQuery);
+  Future<void> retry() => load(lastQuery, filters: lastFilters);
 }

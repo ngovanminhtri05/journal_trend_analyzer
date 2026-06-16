@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -28,12 +29,27 @@ class _SearchScreenState extends State<SearchScreen> {
     final query = _controller.text.trim();
     if (query.isEmpty) return;
     FocusScope.of(context).unfocus();
-    context.read<SearchProvider>().search(query);
+    final filters = context.read<FilterProvider>().activeFilterClauses;
+    context.read<SearchProvider>().search(query, filters: filters);
   }
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<SearchProvider>();
+    // Re-run the current search whenever the taxonomy filter changes (FR-13),
+    // so toggling a filter immediately refreshes the visible results.
+    final filters = context.watch<FilterProvider>().activeFilterClauses;
+    if (provider.lastQuery.isNotEmpty &&
+        provider.state != ViewState.loading &&
+        !listEquals(filters, provider.lastFilters)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        context.read<SearchProvider>().search(
+          provider.lastQuery,
+          filters: filters,
+        );
+      });
+    }
 
     return Column(
       children: [
@@ -54,6 +70,8 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
           ),
         ),
+        const FilterPanel(),
+        const SizedBox(height: 8),
         Expanded(child: _buildBody(provider)),
       ],
     );

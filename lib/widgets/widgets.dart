@@ -3,6 +3,7 @@
 /// Shared UI components: state views, paper card, stat card, charts.
 library;
 
+export 'filter_panel.dart';
 export 'paper_card.dart';
 export 'ranked_count_list.dart';
 export 'responsive_body.dart';

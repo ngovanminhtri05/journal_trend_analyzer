@@ -14,24 +14,29 @@ class SearchProvider extends ChangeNotifier {
   ViewState state = ViewState.idle;
   String? errorMessage;
   String lastQuery = '';
+
+  /// Taxonomy filter clauses (FR-13) applied to the last search; replayed by
+  /// [retry].
+  List<String> lastFilters = const [];
   List<Work> results = const [];
 
   /// Monotonic token used to discard responses from superseded requests, so a
   /// slow earlier search cannot overwrite the result of a newer one.
   int _requestId = 0;
 
-  Future<void> search(String keyword) async {
+  Future<void> search(String keyword, {List<String> filters = const []}) async {
     final query = keyword.trim();
     if (query.isEmpty) return;
 
     final requestId = ++_requestId;
     lastQuery = query;
+    lastFilters = filters;
     state = ViewState.loading;
     errorMessage = null;
     notifyListeners();
 
     try {
-      final works = await _service.searchWorks(query);
+      final works = await _service.searchWorks(query, filters: filters);
       if (requestId != _requestId) return; // a newer search has taken over
       results = works;
       state = works.isEmpty ? ViewState.empty : ViewState.success;
@@ -47,5 +52,5 @@ class SearchProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> retry() => search(lastQuery);
+  Future<void> retry() => search(lastQuery, filters: lastFilters);
 }

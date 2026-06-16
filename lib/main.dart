@@ -47,6 +47,7 @@ class _JournalTrendAppState extends State<JournalTrendApp> {
     return MultiProvider(
       providers: [
         Provider<OpenAlexService>.value(value: _service),
+        ChangeNotifierProvider(create: (_) => FilterProvider(_service)),
         ChangeNotifierProvider(create: (_) => SearchProvider(_service)),
         ChangeNotifierProvider(create: (_) => TrendProvider(_service)),
         ChangeNotifierProvider(create: (_) => DashboardProvider(_service)),

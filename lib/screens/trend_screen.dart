@@ -17,14 +17,17 @@ class TrendScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final topic = context.watch<SearchProvider>().lastQuery;
+    final filters = context.watch<FilterProvider>().activeFilterClauses;
     final provider = context.watch<TrendProvider>();
 
-    // Keep the analysis in sync with the shared topic.
+    // Keep the analysis in sync with the shared topic and taxonomy filter.
     syncSharedTopic(
       context: context,
       topic: topic,
-      lastLoaded: provider.lastQuery,
-      load: (t) => context.read<TrendProvider>().load(t),
+      filters: filters,
+      lastLoadedTopic: provider.lastQuery,
+      lastLoadedFilters: provider.lastFilters,
+      load: (t, f) => context.read<TrendProvider>().load(t, filters: f),
     );
 
     if (topic.isEmpty && provider.state == ViewState.idle) {

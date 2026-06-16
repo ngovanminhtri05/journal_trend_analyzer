@@ -14,13 +14,16 @@ class DashboardScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final topic = context.watch<SearchProvider>().lastQuery;
+    final filters = context.watch<FilterProvider>().activeFilterClauses;
     final provider = context.watch<DashboardProvider>();
 
     syncSharedTopic(
       context: context,
       topic: topic,
-      lastLoaded: provider.lastQuery,
-      load: (t) => context.read<DashboardProvider>().load(t),
+      filters: filters,
+      lastLoadedTopic: provider.lastQuery,
+      lastLoadedFilters: provider.lastFilters,
+      load: (t, f) => context.read<DashboardProvider>().load(t, filters: f),
     );
 
     if (topic.isEmpty && provider.state == ViewState.idle) {

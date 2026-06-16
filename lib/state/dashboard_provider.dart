@@ -33,24 +33,29 @@ class DashboardProvider extends ChangeNotifier {
   ViewState state = ViewState.idle;
   String? errorMessage;
   String lastQuery = '';
+
+  /// Taxonomy filter clauses (FR-13) applied to the last load; replayed by
+  /// [retry].
+  List<String> lastFilters = const [];
   DashboardSummary? summary;
 
-  Future<void> load(String keyword) async {
+  Future<void> load(String keyword, {List<String> filters = const []}) async {
     final query = keyword.trim();
     if (query.isEmpty) return;
 
     lastQuery = query;
+    lastFilters = filters;
     state = ViewState.loading;
     errorMessage = null;
     notifyListeners();
 
     try {
       final results = await Future.wait([
-        _service.getTotalCount(query),
-        _service.groupByYear(query),
-        _service.groupByJournal(query),
-        _service.groupByAuthor(query),
-        _service.getTopCited(query),
+        _service.getTotalCount(query, filters: filters),
+        _service.groupByYear(query, filters: filters),
+        _service.groupByJournal(query, filters: filters),
+        _service.groupByAuthor(query, filters: filters),
+        _service.getTopCited(query, filters: filters),
       ]);
 
       final total = results[0] as int;
@@ -83,7 +88,7 @@ class DashboardProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> retry() => load(lastQuery);
+  Future<void> retry() => load(lastQuery, filters: lastFilters);
 
   double _average(List<Work> works) {
     if (works.isEmpty) return 0;
