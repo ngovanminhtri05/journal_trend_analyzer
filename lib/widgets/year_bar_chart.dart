@@ -29,82 +29,111 @@ class YearBarChart extends StatelessWidget {
         .reduce((a, b) => a > b ? a : b)
         .toDouble();
     final theme = Theme.of(context);
+    const leftReserved = 44.0;
 
     return SizedBox(
       height: 240,
-      child: BarChart(
-        BarChartData(
-          maxY: maxCount * 1.2,
-          alignment: BarChartAlignment.spaceAround,
-          barTouchData: BarTouchData(
-            touchTooltipData: BarTouchTooltipData(
-              getTooltipItem: (group, _, rod, _) => BarTooltipItem(
-                '${years[group.x].keyDisplayName}\n${rod.toY.toInt()}',
-                TextStyle(color: theme.colorScheme.onInverseSurface),
-              ),
-            ),
-          ),
-          titlesData: FlTitlesData(
-            topTitles: const AxisTitles(
-              sideTitles: SideTitles(showTitles: false),
-            ),
-            rightTitles: const AxisTitles(
-              sideTitles: SideTitles(showTitles: false),
-            ),
-            leftTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                reservedSize: 44,
-                getTitlesWidget: (value, meta) {
-                  if (value != meta.max && value != value.roundToDouble()) {
-                    return const SizedBox.shrink();
-                  }
-                  return Text(
-                    _compact(value),
-                    style: theme.textTheme.labelSmall,
-                  );
-                },
-              ),
-            ),
-            bottomTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                reservedSize: 28,
-                getTitlesWidget: (value, meta) {
-                  final i = value.toInt();
-                  if (i < 0 || i >= years.length) {
-                    return const SizedBox.shrink();
-                  }
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      years[i].keyDisplayName,
-                      style: theme.textTheme.labelSmall,
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-          gridData: const FlGridData(show: true, drawVerticalLine: false),
-          borderData: FlBorderData(show: false),
-          barGroups: [
-            for (var i = 0; i < years.length; i++)
-              BarChartGroupData(
-                x: i,
-                barRods: [
-                  BarChartRodData(
-                    toY: years[i].count.toDouble(),
-                    color: theme.colorScheme.primary,
-                    width: 14,
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(4),
-                    ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // Plot width available to the bars (chart width minus the Y axis).
+          final plotWidth = (constraints.maxWidth - leftReserved).clamp(
+            1.0,
+            double.infinity,
+          );
+          final slot = plotWidth / years.length;
+          // Bar fills ~55% of its slot, clamped so it never overlaps a
+          // neighbour on narrow screens nor looks like a hairline on wide ones.
+          final barWidth = (slot * 0.55).clamp(5.0, 16.0);
+          // Show at most as many year labels as comfortably fit (~40px each),
+          // skipping the rest so 4-digit years never overlap on a phone.
+          final maxLabels = (plotWidth / 40).floor().clamp(2, years.length);
+          final labelStep = (years.length / maxLabels).ceil();
+
+          return BarChart(
+            BarChartData(
+              maxY: maxCount * 1.2,
+              alignment: BarChartAlignment.spaceAround,
+              barTouchData: BarTouchData(
+                touchTooltipData: BarTouchTooltipData(
+                  getTooltipItem: (group, _, rod, _) => BarTooltipItem(
+                    '${years[group.x].keyDisplayName}\n${rod.toY.toInt()}',
+                    TextStyle(color: theme.colorScheme.onInverseSurface),
                   ),
-                ],
+                ),
               ),
-          ],
-        ),
+              titlesData: FlTitlesData(
+                topTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                rightTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                leftTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: leftReserved,
+                    getTitlesWidget: (value, meta) {
+                      if (value != meta.max &&
+                          value != value.roundToDouble()) {
+                        return const SizedBox.shrink();
+                      }
+                      return Text(
+                        _compact(value),
+                        style: theme.textTheme.labelSmall,
+                      );
+                    },
+                  ),
+                ),
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 28,
+                    getTitlesWidget: (value, meta) {
+                      final i = value.toInt();
+                      if (i < 0 || i >= years.length) {
+                        return const SizedBox.shrink();
+                      }
+                      // Always keep the most recent year, then thin the rest —
+                      // skipping any regular label that would crowd the last.
+                      final last = years.length - 1;
+                      final show =
+                          i == last ||
+                          (i % labelStep == 0 && (last - i) >= labelStep);
+                      if (!show) {
+                        return const SizedBox.shrink();
+                      }
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          years[i].keyDisplayName,
+                          style: theme.textTheme.labelSmall,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+              gridData: const FlGridData(show: true, drawVerticalLine: false),
+              borderData: FlBorderData(show: false),
+              barGroups: [
+                for (var i = 0; i < years.length; i++)
+                  BarChartGroupData(
+                    x: i,
+                    barRods: [
+                      BarChartRodData(
+                        toY: years[i].count.toDouble(),
+                        color: theme.colorScheme.primary,
+                        width: barWidth,
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(4),
+                        ),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
