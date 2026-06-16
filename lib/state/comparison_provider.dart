@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../models/models.dart';
 import '../services/openalex_service.dart';
+import '../services/trend_classifier.dart';
 import 'view_state.dart';
 
 /// Per-topic outcome of a comparison run (FR-8).
@@ -19,11 +20,15 @@ class TopicComparison {
     this.totalPublications = 0,
     this.averageCitations = 0,
     this.peakYear,
+    this.classification,
   });
 
   final String topic;
   final TopicStatus status;
   final String? errorMessage;
+
+  /// FR-9: per-topic trend verdict (null for empty/error topics).
+  final TrendClassification? classification;
 
   /// Raw `group_by=publication_year` buckets (drives the line chart).
   final List<GroupByItem> yearCounts;
@@ -113,6 +118,7 @@ class ComparisonProvider extends ChangeNotifier {
         totalPublications: total,
         averageCitations: _average(topCited),
         peakYear: _peakYear(years),
+        classification: classifyTrend(years),
       );
     } on OpenAlexException catch (e) {
       return TopicComparison(

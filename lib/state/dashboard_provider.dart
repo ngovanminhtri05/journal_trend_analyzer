@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../models/models.dart';
 import '../services/openalex_service.dart';
+import '../services/trend_classifier.dart';
 import 'view_state.dart';
 
 /// The six aggregate insights shown on the Research Dashboard (FR-7).
@@ -39,6 +40,13 @@ class DashboardProvider extends ChangeNotifier {
   List<String> lastFilters = const [];
   DashboardSummary? summary;
 
+  /// Raw `group_by=publication_year` buckets from the last load, kept to derive
+  /// the FR-9 trend verdict.
+  List<GroupByItem> yearCounts = const [];
+
+  /// FR-9: trend verdict derived from [yearCounts] (null when too little data).
+  TrendClassification? get trendClassification => classifyTrend(yearCounts);
+
   Future<void> load(String keyword, {List<String> filters = const []}) async {
     final query = keyword.trim();
     if (query.isEmpty) return;
@@ -63,6 +71,8 @@ class DashboardProvider extends ChangeNotifier {
       final journals = results[2] as List<GroupByItem>;
       final authors = results[3] as List<GroupByItem>;
       final topCited = results[4] as List<Work>;
+
+      yearCounts = years;
 
       if (total == 0) {
         summary = null;

@@ -251,6 +251,14 @@ class _ComparisonTable extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
+                    if (r.classification != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: TrendBadge(
+                          classification: r.classification!,
+                          dense: true,
+                        ),
+                      ),
                     if (note != null)
                       Text(
                         note,

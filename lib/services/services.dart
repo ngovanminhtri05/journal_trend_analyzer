@@ -7,3 +7,4 @@ library;
 export 'abstract_decoder.dart';
 export 'openalex_exceptions.dart';
 export 'openalex_service.dart';
+export 'trend_classifier.dart';

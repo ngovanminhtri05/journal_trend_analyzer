@@ -89,10 +89,22 @@ class _DashboardContent extends StatelessWidget {
       ),
     ];
 
+    final classification = context.watch<DashboardProvider>().trendClassification;
+
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Text('Topic: $topic', style: Theme.of(context).textTheme.titleMedium),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Topic: $topic',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+            if (classification != null) TrendBadge(classification: classification),
+          ],
+        ),
         const SizedBox(height: 16),
         LayoutBuilder(
           builder: (context, constraints) {
