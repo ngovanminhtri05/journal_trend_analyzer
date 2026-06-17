@@ -33,6 +33,9 @@ class BookmarkService {
       return decoded
           .whereType<Map<String, dynamic>>()
           .map(Bookmark.fromJson)
+          // Drop orphaned entries (empty id) that corrupt or hand-edited JSON
+          // could produce — they would never match an isBookmarked() check.
+          .where((b) => b.id.isNotEmpty)
           .toList();
     } catch (_) {
       // Corrupt payload — fail soft with an empty collection.

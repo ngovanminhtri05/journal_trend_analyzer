@@ -21,6 +21,9 @@ class BookmarkProvider extends ChangeNotifier {
   /// Whether the initial load has finished (UI can show a spinner until then).
   bool ready = false;
 
+  /// Set when the last persistence attempt failed (UI may surface it).
+  String? lastError;
+
   List<Bookmark> get bookmarks => _bookmarks;
 
   List<Bookmark> byType(BookmarkType type) =>
@@ -43,30 +46,45 @@ class BookmarkProvider extends ChangeNotifier {
   }
 
   /// Adds the bookmark if absent, removes it if already saved. Updates the UI
-  /// immediately, then persists.
+  /// immediately, then persists (rolling back on failure).
   Future<void> toggle(Bookmark bookmark) async {
-    final index = _bookmarks.indexWhere(
+    final previous = _bookmarks;
+    final index = previous.indexWhere(
       (b) => b.type == bookmark.type && b.id == bookmark.id,
     );
-    final next = [..._bookmarks];
+    final next = [...previous];
     if (index >= 0) {
       next.removeAt(index);
     } else {
       next.insert(0, bookmark); // newest first
     }
     _bookmarks = next;
+    lastError = null;
     notifyListeners();
-    await _service.save(_bookmarks);
+    await _persist(previous);
   }
 
   /// Removes a bookmark by identity (used by the collection screen).
   Future<void> remove(BookmarkType type, String id) async {
-    final next = _bookmarks
-        .where((b) => !(b.type == type && b.id == id))
-        .toList();
-    if (next.length == _bookmarks.length) return;
+    final previous = _bookmarks;
+    final next = previous.where((b) => !(b.type == type && b.id == id)).toList();
+    if (next.length == previous.length) return;
     _bookmarks = next;
+    lastError = null;
     notifyListeners();
-    await _service.save(_bookmarks);
+    await _persist(previous);
+  }
+
+  /// Persists the current collection. If saving throws (storage full, I/O
+  /// error, permission denied), rolls back to [previous] and records
+  /// [lastError] so the UI never claims a change that wasn't saved.
+  Future<void> _persist(List<Bookmark> previous) async {
+    try {
+      await _service.save(_bookmarks);
+    } catch (_) {
+      _bookmarks = previous;
+      lastError = 'Could not save your bookmark. Please try again.';
+      notifyListeners();
+    }
   }
 }

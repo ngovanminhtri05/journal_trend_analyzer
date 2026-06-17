@@ -6,11 +6,16 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:journal_trend_analyzer/main.dart';
 import 'package:journal_trend_analyzer/services/openalex_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   testWidgets('search flow: type → search → loading → result tile', (
     tester,
   ) async {
+    // The app reads bookmarks from shared_preferences at boot; give the test an
+    // in-memory store so the collection tab settles instead of hanging.
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+
     final responseBody = jsonEncode({
       'meta': {'count': 1},
       'results': [

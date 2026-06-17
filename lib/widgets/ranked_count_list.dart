@@ -128,7 +128,17 @@ class _RankRow extends StatelessWidget {
     );
   }
 
-  Bookmark _toBookmark() => bookmarkType == BookmarkType.journal
-      ? Bookmark.fromJournal(item)
-      : Bookmark.fromAuthor(item);
+  Bookmark _toBookmark() {
+    switch (bookmarkType) {
+      case BookmarkType.journal:
+        return Bookmark.fromJournal(item);
+      case BookmarkType.author:
+        return Bookmark.fromAuthor(item);
+      case BookmarkType.work:
+        // This widget only ranks journals/authors; guard against silent misuse.
+        throw ArgumentError(
+          'RankedCountList supports BookmarkType.journal and .author only.',
+        );
+    }
+  }
 }
