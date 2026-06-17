@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/models.dart';
 import '../services/abstract_decoder.dart';
+import '../state/state.dart';
 import '../widgets/widgets.dart';
 
 /// Publication detail screen (FR-2): full metadata, decoded abstract, and an
@@ -18,8 +20,20 @@ class DetailScreen extends StatelessWidget {
     final abstractText = reconstructAbstract(work.abstractInvertedIndex);
     final doiUrl = _doiUrl(work.doi);
 
+    final bookmarks = context.watch<BookmarkProvider>();
+    final saved = bookmarks.isBookmarked(BookmarkType.work, work.id ?? work.title);
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Publication')),
+      appBar: AppBar(
+        title: const Text('Publication'),
+        actions: [
+          IconButton(
+            tooltip: saved ? 'Remove bookmark' : 'Save bookmark',
+            icon: Icon(saved ? Icons.bookmark : Icons.bookmark_border),
+            onPressed: () => bookmarks.toggle(Bookmark.fromWork(work)),
+          ),
+        ],
+      ),
       body: ResponsiveBody(
         child: ListView(
           padding: const EdgeInsets.all(16),

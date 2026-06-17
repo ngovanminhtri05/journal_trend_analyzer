@@ -4,6 +4,7 @@
 library;
 
 export 'author.dart';
+export 'bookmark.dart';
 export 'group_by_item.dart';
 export 'source.dart';
 export 'taxonomy.dart';
