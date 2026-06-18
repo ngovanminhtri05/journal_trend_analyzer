@@ -138,11 +138,91 @@ The Publication detail screen is pushed on top.
 `http`, `provider`, `fl_chart`, `url_launcher`, `google_fonts`,
 `shared_preferences`, `share_plus`.
 
-## Run
+## Setup (A–Z)
 
+The app talks to OpenAlex directly, so you only need Flutter and an
+internet-connected Android device/emulator — there is no server to run.
+
+### Option A — Just install the app (no coding)
+
+1. Get the APK: `dist/journal_trend_analyzer-release.apk` (or build it, Option B).
+2. Copy it to an Android phone and open it to install (allow "Install from
+   unknown sources" if prompted), **or** with a device/emulator connected:
+   ```bash
+   adb install -r dist/journal_trend_analyzer-release.apk
+   ```
+3. Open the app. Make sure the device has internet — the first search loads data
+   live from OpenAlex.
+
+### Option B — Run from source (developers)
+
+**1. Prerequisites**
+
+- **Flutter SDK** 3.41+ (Dart 3.11+) — https://docs.flutter.dev/get-started/install
+- **Android toolchain**: Android Studio (or just the Android SDK + platform-tools)
+- An **Android emulator** or a physical device with USB debugging
+- **Git**, and an internet connection
+
+Check your setup:
 ```bash
-flutter pub get
-flutter run
+flutter doctor
+```
+Resolve anything not ticked under "Flutter" and "Android toolchain".
+
+**2. Get the code**
+```bash
+git clone https://github.com/ngovanminhtri05/journal_trend_analyzer.git
+cd journal_trend_analyzer
 ```
 
-Requires the Flutter SDK and a connected device/emulator.
+**3. Install dependencies**
+```bash
+flutter pub get
+```
+
+**4. Start a device**
+```bash
+flutter emulators                 # list installed emulators
+flutter emulators --launch <id>   # e.g. Pixel_7  (or start one from Android Studio)
+flutter devices                   # confirm it is connected
+```
+
+**5. Run the app**
+```bash
+flutter run                       # builds, installs, runs (press r = hot reload)
+```
+
+**6. (Optional) build a release APK**
+```bash
+flutter build apk --release
+# output: build/app/outputs/flutter-apk/app-release.apk
+# smaller per-ABI builds:
+flutter build apk --release --split-per-abi
+```
+
+**7. (Optional) verify quality**
+```bash
+flutter analyze   # static analysis (expected: No issues found!)
+flutter test      # unit/widget tests
+```
+
+### Configuration
+
+OpenAlex's "polite pool" wants a contact email. It is set once in
+[`lib/main.dart`](lib/main.dart) (`JournalTrendApp.mailto`) — change it to your
+own email if you fork the project. No API key is required.
+
+### Troubleshooting
+
+- **No results / network errors** → the device has no internet, or OpenAlex is
+  rate-limiting; the screen shows a friendly error with a **Retry** button.
+- **Plugin errors right after adding a dependency** → stop the app and run
+  `flutter run` again (hot reload cannot load new native plugins).
+- **Emulator won't start** → enable hardware virtualization (VT-x/Hyper-V) in
+  BIOS, or launch the emulator from Android Studio's Device Manager.
+
+### Testing
+
+A full manual test script (UAT) covering every feature is in
+[`docs/UAT-test-flow.md`](docs/UAT-test-flow.md). Automated AI code-review
+evidence (CodeRabbit) is in [`docs/coderabbit-review-log.md`](docs/coderabbit-review-log.md).
