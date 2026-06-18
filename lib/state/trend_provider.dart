@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../models/models.dart';
 import '../services/openalex_service.dart';
+import '../services/trend_classifier.dart';
 import 'view_state.dart';
 
 /// Drives the Trend screen (FR-3/4/5/6): year trend, top journals, top authors,
@@ -23,6 +24,9 @@ class TrendProvider extends ChangeNotifier {
   List<GroupByItem> topJournals = const [];
   List<GroupByItem> topAuthors = const [];
   List<Work> topPapers = const [];
+
+  /// FR-9: trend verdict derived from [yearCounts] (null when too little data).
+  TrendClassification? get trendClassification => classifyTrend(yearCounts);
 
   Future<void> load(String keyword, {List<String> filters = const []}) async {
     final query = keyword.trim();

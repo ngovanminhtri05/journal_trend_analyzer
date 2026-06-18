@@ -72,6 +72,7 @@ class _SearchScreenState extends State<SearchScreen> {
         ),
         const FilterPanel(),
         const SizedBox(height: 8),
+        const _SearchTrendBadge(),
         Expanded(child: _buildBody(provider)),
       ],
     );
@@ -109,5 +110,35 @@ class _SearchScreenState extends State<SearchScreen> {
           },
         );
     }
+  }
+}
+
+/// FR-9 trend badge for the searched topic. Reuses the year data the
+/// [TrendProvider] already fetched for the same shared topic, so the Search
+/// tab shows the verdict without an extra request. Hidden until that data is
+/// ready and matches the current query.
+class _SearchTrendBadge extends StatelessWidget {
+  const _SearchTrendBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    final query = context.watch<SearchProvider>().lastQuery;
+    final trend = context.watch<TrendProvider>();
+    final classification = trend.trendClassification;
+
+    if (query.isEmpty ||
+        trend.state != ViewState.success ||
+        trend.lastQuery != query ||
+        classification == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: TrendBadge(classification: classification),
+      ),
+    );
   }
 }

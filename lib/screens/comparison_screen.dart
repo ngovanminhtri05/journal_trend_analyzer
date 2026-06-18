@@ -204,6 +204,11 @@ class _ComparisonTable extends StatelessWidget {
       scrollDirection: Axis.horizontal,
       child: DataTable(
         columnSpacing: 24,
+        // The Topic cell stacks a name + a trend badge (or status note), which
+        // is taller than the default 48px row. Let the row grow unbounded so it
+        // never clips, including under larger system text scaling.
+        dataRowMinHeight: 56,
+        dataRowMaxHeight: double.infinity,
         columns: const [
           DataColumn(label: Text('Topic')),
           DataColumn(label: Text('Total'), numeric: true),
@@ -251,6 +256,14 @@ class _ComparisonTable extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
+                    if (r.classification != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: TrendBadge(
+                          classification: r.classification!,
+                          dense: true,
+                        ),
+                      ),
                     if (note != null)
                       Text(
                         note,

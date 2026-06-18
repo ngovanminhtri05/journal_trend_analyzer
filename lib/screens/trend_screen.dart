@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../models/models.dart';
 import '../state/state.dart';
 import '../widgets/widgets.dart';
 import 'detail_screen.dart';
@@ -73,11 +74,17 @@ class _TrendContent extends StatelessWidget {
         const SizedBox(height: 24),
         _Header('Top journals', Icons.menu_book),
         const SizedBox(height: 8),
-        RankedCountList(items: provider.topJournals),
+        RankedCountList(
+          items: provider.topJournals,
+          bookmarkType: BookmarkType.journal,
+        ),
         const SizedBox(height: 24),
         _Header('Top authors', Icons.people_outline),
         const SizedBox(height: 8),
-        RankedCountList(items: provider.topAuthors),
+        RankedCountList(
+          items: provider.topAuthors,
+          bookmarkType: BookmarkType.author,
+        ),
         const SizedBox(height: 24),
         _Header('Most influential papers', Icons.local_fire_department),
         const SizedBox(height: 8),

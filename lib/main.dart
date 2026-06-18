@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'screens/home_shell.dart';
+import 'services/bookmark_service.dart';
 import 'services/openalex_service.dart';
 import 'state/state.dart';
 import 'theme/app_theme.dart';
@@ -16,13 +17,17 @@ void main() {
 /// app is torn down) plus the three screen providers. The service can be
 /// injected for tests.
 class JournalTrendApp extends StatefulWidget {
-  const JournalTrendApp({super.key, this.service});
+  const JournalTrendApp({super.key, this.service, this.bookmarkService});
 
   /// Polite-pool contact sent on every OpenAlex request.
   static const String mailto = 'ngovanminhtri05@gmail.com';
 
   /// Optional injected service (tests). When null, one is created internally.
   final OpenAlexService? service;
+
+  /// Optional injected bookmark service (tests). When null, one is created
+  /// internally (it resolves shared-preferences lazily — see [BookmarkService]).
+  final BookmarkService? bookmarkService;
 
   @override
   State<JournalTrendApp> createState() => _JournalTrendAppState();
@@ -31,6 +36,9 @@ class JournalTrendApp extends StatefulWidget {
 class _JournalTrendAppState extends State<JournalTrendApp> {
   late final OpenAlexService _service =
       widget.service ?? OpenAlexService(mailto: JournalTrendApp.mailto);
+
+  late final BookmarkService _bookmarkService =
+      widget.bookmarkService ?? BookmarkService();
 
   /// Only dispose a service we created ourselves; an injected one is owned by
   /// the test that provided it.
@@ -52,6 +60,7 @@ class _JournalTrendAppState extends State<JournalTrendApp> {
         ChangeNotifierProvider(create: (_) => TrendProvider(_service)),
         ChangeNotifierProvider(create: (_) => DashboardProvider(_service)),
         ChangeNotifierProvider(create: (_) => ComparisonProvider(_service)),
+        ChangeNotifierProvider(create: (_) => BookmarkProvider(_bookmarkService)),
       ],
       child: MaterialApp(
         title: 'Journal Trend Analyzer',

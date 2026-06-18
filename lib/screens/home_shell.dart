@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../widgets/widgets.dart';
+import 'collection_screen.dart';
 import 'comparison_screen.dart';
 import 'dashboard_screen.dart';
 import 'search_screen.dart';
@@ -26,6 +27,7 @@ class _HomeShellState extends State<HomeShell> {
     _TabConfig('Trends', Icons.show_chart, TrendScreen()),
     _TabConfig('Compare', Icons.compare_arrows, ComparisonScreen()),
     _TabConfig('Dashboard', Icons.dashboard, DashboardScreen()),
+    _TabConfig('Saved', Icons.bookmark, CollectionScreen()),
   ];
 
   @override

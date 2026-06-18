@@ -241,7 +241,21 @@ class _Legend extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 6),
-              Text(s.topic, style: Theme.of(context).textTheme.bodySmall),
+              // Cap the label width so a long topic name can't overflow the
+              // legend row inside the Wrap; the full name stays available via a
+              // tooltip.
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 200),
+                child: Tooltip(
+                  message: s.topic,
+                  child: Text(
+                    s.topic,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+              ),
             ],
           ),
       ],
