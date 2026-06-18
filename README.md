@@ -92,6 +92,42 @@ Save items for offline access, stored **locally** with `shared_preferences`
 - Bookmarks **persist** across restarts; all persistence is encapsulated in
   `BookmarkService` (the UI never touches `shared_preferences` directly).
 
+### FR-14 — Export citation
+
+Export a paper's metadata in standard reference formats for Zotero / Mendeley /
+LaTeX, computed entirely from existing `Work` fields (no extra API call):
+
+- Pure `CitationFormatter`: **BibTeX**, **RIS**, and **APA-7** (plain text);
+  citation key is `<firstAuthorSurname><year>` (e.g. `vaswani2017`); null fields
+  are omitted (never prints "null").
+- **Export Citation** on the detail screen → bottom sheet with a format selector
+  + **Copy** (clipboard) and **Share** (`share_plus`, text only — no backend).
+- **Export All** on the Saved tab → re-fetches the bookmarked publications by id
+  to recover authors/biblio and emits one multi-entry BibTeX string (the main
+  workflow for a researcher: bookmark over time, export the whole list at once).
+  Falls back to stored fields when offline.
+- **Improve metadata**: when a record is missing its journal (OpenAlex often
+  holds duplicate variants), the export sheet can look up the most-cited record
+  with the same title and swap it in (user-triggered, never silent).
+
+### FR-15 — Citation network
+
+"Follow the citation trail" to discover related work, using two tappable lists
+(no heavy graph):
+
+- On the detail screen, lazy **References (N)** and **Cited by (N)** sections
+  (fetched only on expand). References use `filter=openalex:` (OR-joined ids,
+  chunked); cited-by uses `filter=cites:<id>&sort=publication_date:desc`.
+- Each item shows title / first author + year / cited-by count; tapping opens
+  that paper's detail recursively (`Navigator.push`, back-stack preserved), and
+  every item can be bookmarked (FR-10) and exported (FR-14).
+- Independent loading / empty / error per section; empty references show
+  "No reference data available".
+- **Citation tree** (from the detail screen): an inline, lazily-expanding tree
+  of the citation network (References or Cited-by direction) so several levels
+  can be traced at once to spot clusters and sparse branches (research gaps).
+  Depth- and child-capped, cycle-guarded, one request per expand.
+
 ## Navigation
 
 Bottom navigation with 5 tabs: **Search · Trends · Compare · Dashboard · Saved**.
@@ -100,7 +136,7 @@ The Publication detail screen is pushed on top.
 ## Dependencies
 
 `http`, `provider`, `fl_chart`, `url_launcher`, `google_fonts`,
-`shared_preferences`.
+`shared_preferences`, `share_plus`.
 
 ## Run
 

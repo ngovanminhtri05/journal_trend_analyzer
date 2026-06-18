@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../models/models.dart';
+import '../services/services.dart';
 import '../state/state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/widgets.dart';
@@ -38,10 +39,68 @@ class CollectionScreen extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.symmetric(vertical: 8),
       children: [
+        if (works.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: FilledButton.tonalIcon(
+              onPressed: () => _exportAll(context, works),
+              icon: const Icon(Icons.ios_share, size: 18),
+              label: Text('Export all publications (${works.length}) — BibTeX'),
+            ),
+          ),
         ..._section(context, 'Publications', Icons.article_outlined, works),
         ..._section(context, 'Journals', Icons.menu_book, journals),
         ..._section(context, 'Authors', Icons.people_outline, authors),
       ],
+    );
+  }
+
+  /// FR-14 Export All: re-fetch full Works for bookmarked publications (to get
+  /// authors/biblio) and emit one multi-entry BibTeX string. Bookmarks whose id
+  /// is not an OpenAlex work id — or everything, if the network fails — fall
+  /// back to the minimal fields stored on the bookmark.
+  Future<void> _exportAll(
+    BuildContext context,
+    List<Bookmark> publications,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final service = context.read<OpenAlexService>();
+
+    final fetchable = <Work>[]; // minimal works carrying a real W-id
+    final offline = <Work>[]; // not fetchable → minimal only
+    final wIdPattern = RegExp(r'^W\d+$');
+    for (final b in publications) {
+      final work = b.toWork();
+      if (wIdPattern.hasMatch(work.shortId ?? '')) {
+        fetchable.add(work);
+      } else {
+        offline.add(work);
+      }
+    }
+
+    List<Work> enriched;
+    try {
+      enriched = fetchable.isEmpty
+          ? const []
+          : await service.fetchWorksByIds(
+              fetchable.map((w) => w.shortId!).toList(),
+            );
+    } catch (_) {
+      enriched = fetchable; // degrade to stored fields on network failure
+    }
+
+    final works = [...enriched, ...offline];
+    if (works.isEmpty) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Nothing to export.')),
+      );
+      return;
+    }
+    if (!context.mounted) return;
+    await showExportTextSheet(
+      context,
+      title: 'Export all — BibTeX (${works.length})',
+      text: CitationFormatter.toBibTeXList(works),
     );
   }
 

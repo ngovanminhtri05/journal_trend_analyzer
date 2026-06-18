@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:http/http.dart' as http;
 
@@ -122,6 +123,75 @@ class OpenAlexService {
       if (page > 10) break; // safety cap; OpenAlex offset paging stops at 10k
     }
     return all;
+  }
+
+  /// FR-15 (outgoing references): fetch full Work objects for a list of short
+  /// OpenAlex ids using the `openalex:` OR filter, chunked so the URL stays
+  /// short. Pass at most a screenful of ids (the caller caps references).
+  Future<List<Work>> fetchWorksByIds(
+    List<String> ids, {
+    int chunkSize = 50,
+  }) async {
+    final clean = ids.map(_shortId).where((s) => s.isNotEmpty).toList();
+    if (clean.isEmpty) return const [];
+    final out = <Work>[];
+    for (var i = 0; i < clean.length; i += chunkSize) {
+      final chunk = clean.sublist(i, min(i + chunkSize, clean.length));
+      final json = await _getJson(
+        _apiUri(_worksPath, {
+          'filter': 'openalex:${chunk.join('|')}',
+          'per-page': '${chunk.length}',
+        }),
+      );
+      out.addAll(_parseWorks(json));
+    }
+    return out;
+  }
+
+  /// FR-14: find candidate records for a [title], most-cited first. Used to
+  /// pick a "canonical" version when the record in hand is missing metadata
+  /// (OpenAlex often holds several variants of the same paper).
+  Future<List<Work>> findBestRecordByTitle(
+    String title, {
+    int perPage = 5,
+  }) async {
+    final query = title.trim();
+    if (query.isEmpty) return const [];
+    final json = await _getJson(
+      _apiUri(_worksPath, {
+        'filter': 'title.search:$query',
+        'sort': 'cited_by_count:desc',
+        'per-page': '$perPage',
+      }),
+    );
+    return _parseWorks(json);
+  }
+
+  /// FR-15 (incoming citations): fetch works that cite [workId]. [sort] is an
+  /// OpenAlex sort expression (default newest first; pass
+  /// `cited_by_count:desc` for most-cited first).
+  Future<List<Work>> getCitedBy(
+    String workId, {
+    int perPage = 25,
+    String sort = 'publication_date:desc',
+  }) async {
+    final id = _shortId(workId);
+    if (id.isEmpty) return const [];
+    final json = await _getJson(
+      _apiUri(_worksPath, {
+        'filter': 'cites:$id',
+        'sort': sort,
+        'per-page': '$perPage',
+      }),
+    );
+    return _parseWorks(json);
+  }
+
+  /// Last path segment of an OpenAlex id ("https://openalex.org/W1" → "W1").
+  static String _shortId(String id) {
+    final trimmed = id.trim();
+    final slash = trimmed.lastIndexOf('/');
+    return slash == -1 ? trimmed : trimmed.substring(slash + 1);
   }
 
   Future<List<GroupByItem>> _groupBy(
