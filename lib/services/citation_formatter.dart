@@ -97,8 +97,9 @@ class CitationFormatter {
   /// `<firstAuthorSurname><year>` lowercased ASCII (e.g. "smith2023"). Falls
   /// back to the first title word, then to the short id, then "ref".
   static String citationKey(Work work) {
+    final title = work.title.trim();
     final base = work.firstAuthorSurname ??
-        (work.title.trim().isEmpty ? null : work.title.trim().split(RegExp(r'\s+')).first) ??
+        (title.isEmpty ? null : title.split(RegExp(r'\s+')).first) ??
         work.shortId ??
         'ref';
     final slug = base.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');

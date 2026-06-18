@@ -132,7 +132,7 @@ class OpenAlexService {
     List<String> ids, {
     int chunkSize = 50,
   }) async {
-    final clean = ids.map(_shortId).where((s) => s.isNotEmpty).toList();
+    final clean = ids.map(shortOpenAlexId).where((s) => s.isNotEmpty).toList();
     if (clean.isEmpty) return const [];
     final out = <Work>[];
     for (var i = 0; i < clean.length; i += chunkSize) {
@@ -155,7 +155,12 @@ class OpenAlexService {
     String title, {
     int perPage = 5,
   }) async {
-    final query = title.trim();
+    // OpenAlex uses ',' as the filter delimiter and '|' as OR, so a comma in a
+    // `.search` value returns HTTP 403. Strip those reserved characters.
+    final query = title
+        .replaceAll(RegExp(r'[,|]'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
     if (query.isEmpty) return const [];
     final json = await _getJson(
       _apiUri(_worksPath, {
@@ -175,7 +180,7 @@ class OpenAlexService {
     int perPage = 25,
     String sort = 'publication_date:desc',
   }) async {
-    final id = _shortId(workId);
+    final id = shortOpenAlexId(workId);
     if (id.isEmpty) return const [];
     final json = await _getJson(
       _apiUri(_worksPath, {
@@ -185,13 +190,6 @@ class OpenAlexService {
       }),
     );
     return _parseWorks(json);
-  }
-
-  /// Last path segment of an OpenAlex id ("https://openalex.org/W1" → "W1").
-  static String _shortId(String id) {
-    final trimmed = id.trim();
-    final slash = trimmed.lastIndexOf('/');
-    return slash == -1 ? trimmed : trimmed.substring(slash + 1);
   }
 
   Future<List<GroupByItem>> _groupBy(

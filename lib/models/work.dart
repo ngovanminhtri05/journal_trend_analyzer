@@ -1,6 +1,7 @@
 import 'author.dart';
 import 'biblio.dart';
 import 'source.dart';
+import 'taxonomy.dart';
 
 /// A publication ("work") from OpenAlex.
 ///
@@ -47,7 +48,7 @@ class Work {
   String get authorNames => authors.map((a) => a.displayName).join(', ');
 
   /// Short OpenAlex id (e.g. "W2741809807") parsed from the full [id] URL.
-  String? get shortId => id == null ? null : _shortId(id!);
+  String? get shortId => id == null ? null : shortOpenAlexId(id!);
 
   /// Surname (last whitespace-separated token) of the first author, or null.
   /// Used for citation keys and APA formatting (FR-14).
@@ -91,7 +92,7 @@ class Work {
     final refs = (json['referenced_works'] as List<dynamic>?) ?? const [];
     final referencedWorks = refs
         .whereType<String>()
-        .map(_shortId)
+        .map(shortOpenAlexId)
         .where((id) => id.isNotEmpty)
         .toList();
     final referencedWorksCount =
@@ -112,13 +113,5 @@ class Work {
       referencedWorks: referencedWorks,
       referencedWorksCount: referencedWorksCount,
     );
-  }
-
-  /// Last path segment of an OpenAlex id URL
-  /// ("https://openalex.org/W123" → "W123").
-  static String _shortId(String id) {
-    final trimmed = id.trim();
-    final slash = trimmed.lastIndexOf('/');
-    return slash == -1 ? trimmed : trimmed.substring(slash + 1);
   }
 }

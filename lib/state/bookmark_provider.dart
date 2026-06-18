@@ -61,7 +61,7 @@ class BookmarkProvider extends ChangeNotifier {
     _bookmarks = next;
     lastError = null;
     notifyListeners();
-    await _persist(previous);
+    await _persist(previous, next);
   }
 
   /// Removes a bookmark by identity (used by the collection screen).
@@ -72,16 +72,21 @@ class BookmarkProvider extends ChangeNotifier {
     _bookmarks = next;
     lastError = null;
     notifyListeners();
-    await _persist(previous);
+    await _persist(previous, next);
   }
 
-  /// Persists the current collection. If saving throws (storage full, I/O
-  /// error, permission denied), rolls back to [previous] and records
-  /// [lastError] so the UI never claims a change that wasn't saved.
-  Future<void> _persist(List<Bookmark> previous) async {
+  /// Persists [attempted] (the snapshot we optimistically applied). If saving
+  /// throws, rolls back to [previous] — but only when [attempted] is still the
+  /// current state, so a newer operation that already superseded it is not
+  /// clobbered (prevents a concurrent-write data loss race).
+  Future<void> _persist(
+    List<Bookmark> previous,
+    List<Bookmark> attempted,
+  ) async {
     try {
-      await _service.save(_bookmarks);
+      await _service.save(attempted);
     } catch (_) {
+      if (!identical(_bookmarks, attempted)) return; // superseded — leave it
       _bookmarks = previous;
       lastError = 'Could not save your bookmark. Please try again.';
       notifyListeners();
