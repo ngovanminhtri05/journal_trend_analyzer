@@ -1,5 +1,12 @@
 /// State-management layer (Provider / ChangeNotifier).
 ///
-/// Holds the `ViewState` enum (loading / success / error / empty) and the
-/// `ChangeNotifier` providers (search, trend, dashboard). Populated in Phase 2.
+/// The `ViewState` enum and the three screen providers.
 library;
+
+export 'bookmark_provider.dart';
+export 'comparison_provider.dart';
+export 'dashboard_provider.dart';
+export 'filter_provider.dart';
+export 'search_provider.dart';
+export 'trend_provider.dart';
+export 'view_state.dart';

@@ -1,0 +1,12 @@
+# CodeRabbit configuration — https://docs.coderabbit.ai/guides/configure-coderabbit
+language: en-US
+reviews:
+  profile: assertive
+  high_level_summary: true
+  review_status: true
+  poem: false
+  auto_review:
+    enabled: true
+    drafts: false
+chat:
+  auto_reply: true

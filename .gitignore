@@ -46,3 +46,7 @@ app.*.map.json
 
 # Claude Code local state
 .claude/
+
+# Distributables / build artifacts
+dist/
+*.apk
