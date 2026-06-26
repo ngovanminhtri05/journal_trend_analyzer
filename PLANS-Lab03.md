@@ -55,33 +55,33 @@ Lab 03 changes the product significantly:
 
 | Task | 内容 | DoD | Depends | Status |
 |------|------|-----|---------|--------|
-| 3.1 | BottomNavigationBar **Home · Journals · Keywords · Profile**; detail screens pushed `[tdd:skip:ui]` | 4 tabs switch; back-stack works | 2.3 | cc:todo |
+| 3.1 | BottomNavigationBar **Home · Journals · Keywords · Profile**; detail screens pushed `[tdd:skip:ui]` | 4 tabs switch; back-stack works | 2.3 | cc:done [1d830da] |
 
 ## Phase 4: Home (overview dashboard)
 
 | Task | 内容 | DoD | Depends | Status |
 |------|------|-----|---------|--------|
-| 4.1 | `HomeViewModel` + HomeScreen: search topic, trend chart (reuse fl_chart), total pubs, avg citations, most-active year, top author, top journal, most-influential pub; tap pub→detail `[tdd:required]` | All 7 metrics + chart from live data; loading/empty/error | 3.1 | cc:todo |
+| 4.1 | `HomeViewModel` + HomeScreen: search topic, trend chart (reuse fl_chart), total pubs, avg citations, most-active year, top author, top journal, most-influential pub; tap pub→detail `[tdd:required]` | All 7 metrics + chart from live data; loading/empty/error | 3.1 | cc:done [1d830da] |
 
 ## Phase 5: Publication Detail (reuse Lab 02)
 
 | Task | 内容 | DoD | Depends | Status |
 |------|------|-----|---------|--------|
-| 5.1 | PublicationDetailScreen: title/authors/year/journal/citations/DOI(link)/abstract `[tdd:skip:ui]` | All fields shown; DOI opens browser | 4.1 | cc:todo |
+| 5.1 | PublicationDetailScreen: title/authors/year/journal/citations/DOI(link)/abstract `[tdd:skip:ui]` | All fields shown; DOI opens browser | 4.1 | cc:done [1d830da] |
 
 ## Phase 6: Journals
 
 | Task | 内容 | DoD | Depends | Status |
 |------|------|-----|---------|--------|
-| 6.1 | `JournalsViewModel` + JournalsScreen: top journals by count, per-journal stats, contribution chart, citation stats (`group_by=primary_location.source.id`) `[tdd:required]` | Ranked list + chart from live data; tap→detail | 4.1 | cc:todo |
-| 6.2 | JournalDetailScreen: name, total pubs, total citations, avg citations/pub, related pubs (`filter=primary_location.source.id:`) `[tdd:skip:ui]` | All fields + related list shown | 6.1 | cc:todo |
+| 6.1 | `JournalsViewModel` + JournalsScreen: top journals by count, per-journal stats, contribution chart, citation stats (`group_by=primary_location.source.id`) `[tdd:required]` | Ranked list + chart from live data; tap→detail | 4.1 | cc:done [1d830da] |
+| 6.2 | JournalDetailScreen: name, total pubs, total citations, avg citations/pub, related pubs (`filter=primary_location.source.id:`) `[tdd:skip:ui]` | All fields + related list shown | 6.1 | cc:done [1d830da] |
 
 ## Phase 7: Keywords
 
 | Task | 内容 | DoD | Depends | Status |
 |------|------|-----|---------|--------|
-| 7.1 | `KeywordsViewModel` + KeywordsScreen: most frequent + trending keywords, frequency stats, trend chart (`group_by=keywords.id` / concepts) `[tdd:required]` | Keyword list + chart from live data; tap→detail | 4.1 | cc:todo |
-| 7.2 | KeywordDetailScreen: trends over time, related journals/pubs, **top authors ranked desc** + author chart (`filter=keywords.id:` + `group_by=authorships.author.id`) `[tdd:skip:ui]` | Author ranking correct (desc by count) | 7.1 | cc:todo |
+| 7.1 | `KeywordsViewModel` + KeywordsScreen: most frequent + trending keywords, frequency stats, trend chart (`group_by=keywords.id` / concepts) `[tdd:required]` | Keyword list + chart from live data; tap→detail | 4.1 | cc:done [1d830da] |
+| 7.2 | KeywordDetailScreen: trends over time, related journals/pubs, **top authors ranked desc** + author chart (`filter=keywords.id:` + `group_by=authorships.author.id`) `[tdd:skip:ui]` | Author ranking correct (desc by count) | 7.1 | cc:done [1d830da] |
 
 ## Phase 8: Profile + Firebase demos
 
