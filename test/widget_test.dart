@@ -19,9 +19,11 @@ void main() {
 
     await tester.pumpWidget(JournalTrendApp(service: service));
 
-    // The navigation shell renders its three tabs.
+    // The Lab 03 navigation shell renders its four tabs.
     expect(find.byType(NavigationBar), findsOneWidget);
-    expect(find.text('Trends'), findsWidgets);
-    expect(find.text('Dashboard'), findsWidgets);
+    expect(find.text('Home'), findsWidgets);
+    expect(find.text('Journals'), findsWidgets);
+    expect(find.text('Keywords'), findsWidgets);
+    expect(find.text('Profile'), findsWidgets);
   });
 }

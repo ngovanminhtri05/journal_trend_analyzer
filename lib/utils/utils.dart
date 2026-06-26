@@ -4,3 +4,5 @@
 /// have no Flutter or Firebase dependency. Barrel exports are added as helpers
 /// are introduced.
 library;
+
+export 'aggregations.dart';

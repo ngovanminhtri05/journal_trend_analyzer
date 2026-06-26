@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 
 import '../widgets/widgets.dart';
-import 'collection_screen.dart';
-import 'comparison_screen.dart';
-import 'dashboard_screen.dart';
-import 'search_screen.dart';
-import 'trend_screen.dart';
+import 'home_screen.dart';
+import 'journals_screen.dart';
+import 'keywords_screen.dart';
+import 'profile_screen.dart';
 
-/// Root navigation shell: a [BottomNavigationBar] over the three main tabs.
+/// Root navigation shell (Lab 03): a [NavigationBar] over the four required
+/// tabs — Home · Journals · Keywords · Profile.
 ///
-/// An [IndexedStack] keeps each tab's state alive when switching, so a search
-/// or a loaded chart is not thrown away on tab change. The Publication Detail
-/// screen (FR-2) is pushed on top of this shell, not a tab.
+/// An [IndexedStack] keeps each tab's state alive when switching, so a search or
+/// a loaded chart is not thrown away on tab change. Detail screens (Publication,
+/// Journal, Keyword) are pushed on top of this shell, not tabs.
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
 
@@ -23,11 +23,10 @@ class _HomeShellState extends State<HomeShell> {
   int _index = 0;
 
   static const _tabs = <_TabConfig>[
-    _TabConfig('Search', Icons.search, SearchScreen()),
-    _TabConfig('Trends', Icons.show_chart, TrendScreen()),
-    _TabConfig('Compare', Icons.compare_arrows, ComparisonScreen()),
-    _TabConfig('Dashboard', Icons.dashboard, DashboardScreen()),
-    _TabConfig('Saved', Icons.bookmark, CollectionScreen()),
+    _TabConfig('Home', Icons.home_outlined, HomeScreen()),
+    _TabConfig('Journals', Icons.menu_book_outlined, JournalsScreen()),
+    _TabConfig('Keywords', Icons.tag, KeywordsScreen()),
+    _TabConfig('Profile', Icons.account_circle_outlined, ProfileScreen()),
   ];
 
   @override

@@ -4,31 +4,17 @@ import '../models/models.dart';
 import '../services/openalex_service.dart';
 import '../services/trend_classifier.dart';
 import '../utils/utils.dart';
+import 'dashboard_provider.dart' show DashboardSummary;
 import 'view_state.dart';
 
-/// The six aggregate insights shown on the Research Dashboard (FR-7).
-class DashboardSummary {
-  const DashboardSummary({
-    required this.totalPublications,
-    required this.averageCitations,
-    required this.mostActiveYear,
-    required this.topJournal,
-    required this.topAuthor,
-    required this.mostInfluential,
-  });
-
-  final int totalPublications;
-  final double averageCitations;
-  final int? mostActiveYear;
-  final String? topJournal;
-  final String? topAuthor;
-  final Work? mostInfluential;
-}
-
-/// Drives the Research Dashboard (FR-7) by combining a count query, three
-/// `group_by` aggregations, and the top-cited list into a [DashboardSummary].
-class DashboardProvider extends ChangeNotifier {
-  DashboardProvider(this._service);
+/// Drives the Home overview screen (Lab 03).
+///
+/// A single topic search fans out — via `Future.wait` — to a count query, three
+/// `group_by` aggregations, and the top-cited list, then combines them into a
+/// [DashboardSummary] plus the per-year buckets that feed the trend chart.
+/// The View binds to this; it holds no business logic of its own.
+class HomeViewModel extends ChangeNotifier {
+  HomeViewModel(this._service);
 
   final OpenAlexService _service;
 
@@ -36,35 +22,33 @@ class DashboardProvider extends ChangeNotifier {
   String? errorMessage;
   String lastQuery = '';
 
-  /// Taxonomy filter clauses (FR-13) applied to the last load; replayed by
-  /// [retry].
-  List<String> lastFilters = const [];
+  /// The six aggregate insights (total / avg citations / most-active year /
+  /// top journal / top author / most-influential paper).
   DashboardSummary? summary;
 
-  /// Raw `group_by=publication_year` buckets from the last load, kept to derive
-  /// the FR-9 trend verdict.
+  /// Raw `group_by=publication_year` buckets, kept for the trend chart and the
+  /// FR-9 trend verdict.
   List<GroupByItem> yearCounts = const [];
 
-  /// FR-9: trend verdict derived from [yearCounts] (null when too little data).
+  /// FR-9 trend verdict derived from [yearCounts] (null when too little data).
   TrendClassification? get trendClassification => classifyTrend(yearCounts);
 
-  Future<void> load(String keyword, {List<String> filters = const []}) async {
+  Future<void> search(String keyword) async {
     final query = keyword.trim();
     if (query.isEmpty) return;
 
     lastQuery = query;
-    lastFilters = filters;
     state = ViewState.loading;
     errorMessage = null;
     notifyListeners();
 
     try {
       final results = await Future.wait([
-        _service.getTotalCount(query, filters: filters),
-        _service.groupByYear(query, filters: filters),
-        _service.groupByJournal(query, filters: filters),
-        _service.groupByAuthor(query, filters: filters),
-        _service.getTopCited(query, filters: filters),
+        _service.getTotalCount(query),
+        _service.groupByYear(query),
+        _service.groupByJournal(query),
+        _service.groupByAuthor(query),
+        _service.getTopCited(query),
       ]);
 
       final total = results[0] as int;
@@ -99,5 +83,5 @@ class DashboardProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> retry() => load(lastQuery, filters: lastFilters);
+  Future<void> retry() => search(lastQuery);
 }

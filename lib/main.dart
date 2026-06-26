@@ -61,6 +61,10 @@ class _JournalTrendAppState extends State<JournalTrendApp> {
         ChangeNotifierProvider(create: (_) => DashboardProvider(_service)),
         ChangeNotifierProvider(create: (_) => ComparisonProvider(_service)),
         ChangeNotifierProvider(create: (_) => BookmarkProvider(_bookmarkService)),
+        // Lab 03 tab ViewModels (Home / Journals / Keywords).
+        ChangeNotifierProvider(create: (_) => HomeViewModel(_service)),
+        ChangeNotifierProvider(create: (_) => JournalsViewModel(_service)),
+        ChangeNotifierProvider(create: (_) => KeywordsViewModel(_service)),
       ],
       child: MaterialApp(
         title: 'Journal Trend Analyzer',

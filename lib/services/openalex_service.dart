@@ -77,6 +77,62 @@ class OpenAlexService {
     List<String> filters = const [],
   }) => _groupBy(keyword, 'authorships.author.id', filters);
 
+  /// Lab 03 (Keywords): publication counts per keyword for a topic search.
+  Future<List<GroupByItem>> groupByKeyword(
+    String keyword, {
+    List<String> filters = const [],
+  }) => _groupBy(keyword, 'keywords.id', filters);
+
+  /// Lab 03 (Journal / Keyword detail): works matching a raw OpenAlex [filters]
+  /// list with no free-text search term, most-cited first by default. Filters
+  /// are AND-joined with commas. Reuses `_apiUri`/`_getJson`/`_parseWorks` — no
+  /// new HTTP client.
+  Future<List<Work>> getWorksByFilter(
+    List<String> filters, {
+    int perPage = 25,
+    String sort = 'cited_by_count:desc',
+  }) async {
+    if (filters.isEmpty) return const [];
+    final json = await _getJson(
+      _apiUri(_worksPath, {
+        'filter': filters.join(','),
+        'sort': sort,
+        'per-page': '$perPage',
+      }),
+    );
+    return _parseWorks(json);
+  }
+
+  /// Lab 03 (Journal / Keyword detail): `meta.count` of works matching a raw
+  /// [filters] list (no free-text search).
+  Future<int> getCountByFilter(List<String> filters) async {
+    if (filters.isEmpty) return 0;
+    final json = await _getJson(
+      _apiUri(_worksPath, {'filter': filters.join(','), 'per-page': '1'}),
+    );
+    final meta = json['meta'];
+    if (meta is! Map || meta['count'] is! num) {
+      throw const ParseException('Missing meta.count in response.');
+    }
+    return (meta['count'] as num).toInt();
+  }
+
+  /// Lab 03 (Keyword detail): `group_by` aggregation over [dimension] for works
+  /// matching a raw [filters] list (no free-text search). Used to scope a
+  /// year-trend or author ranking to a single keyword.
+  Future<List<GroupByItem>> groupByFilter(
+    String dimension,
+    List<String> filters,
+  ) async {
+    final json = await _getJson(
+      _apiUri(_worksPath, {
+        'group_by': dimension,
+        if (filters.isNotEmpty) 'filter': filters.join(','),
+      }),
+    );
+    return _parseGroups(json);
+  }
+
   /// FR-7: total number of works matching the topic (`meta.count`).
   Future<int> getTotalCount(
     String keyword, {
@@ -200,6 +256,11 @@ class OpenAlexService {
     final json = await _getJson(
       _worksUri({'search': keyword, 'group_by': dimension}, filters),
     );
+    return _parseGroups(json);
+  }
+
+  /// Parses the `group_by` bucket array shared by all aggregation queries.
+  List<GroupByItem> _parseGroups(Map<String, dynamic> json) {
     final groups = json['group_by'];
     if (groups is! List) {
       throw const ParseException('Missing group_by array in response.');

@@ -16,6 +16,7 @@ class RankedCountList extends StatelessWidget {
     required this.items,
     required this.bookmarkType,
     this.limit = 8,
+    this.onItemTap,
   });
 
   final List<GroupByItem> items;
@@ -23,6 +24,10 @@ class RankedCountList extends StatelessWidget {
   /// Whether the rows bookmark journals or authors.
   final BookmarkType bookmarkType;
   final int limit;
+
+  /// Optional per-row tap (e.g. open a journal's detail screen). When null the
+  /// rows are not tappable — preserving the original FR-5/FR-6 behaviour.
+  final void Function(GroupByItem item)? onItemTap;
 
   @override
   Widget build(BuildContext context) {
@@ -51,6 +56,7 @@ class RankedCountList extends StatelessWidget {
             item: top[i],
             maxCount: maxCount,
             bookmarkType: bookmarkType,
+            onTap: onItemTap,
           ),
       ],
     );
@@ -63,12 +69,14 @@ class _RankRow extends StatelessWidget {
     required this.item,
     required this.maxCount,
     required this.bookmarkType,
+    this.onTap,
   });
 
   final int rank;
   final GroupByItem item;
   final int maxCount;
   final BookmarkType bookmarkType;
+  final void Function(GroupByItem item)? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -77,7 +85,7 @@ class _RankRow extends StatelessWidget {
     final bookmarks = context.watch<BookmarkProvider>();
     final saved = bookmarks.isBookmarked(bookmarkType, item.key);
 
-    return Padding(
+    final row = Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
@@ -126,6 +134,9 @@ class _RankRow extends StatelessWidget {
         ],
       ),
     );
+
+    if (onTap == null) return row;
+    return InkWell(onTap: () => onTap!(item), child: row);
   }
 
   Bookmark _toBookmark() {
