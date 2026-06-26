@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:journal_trend_analyzer/services/openalex_service.dart';
-import 'package:journal_trend_analyzer/state/state.dart';
+import 'package:journal_trend_analyzer/viewmodels/viewmodels.dart';
 
 /// MockClient that routes OpenAlex requests by their `group_by`/`sort` params.
 http.Client _router({bool empty = false}) {

@@ -4,7 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../models/models.dart';
 import '../services/services.dart';
-import '../state/state.dart';
+import '../viewmodels/viewmodels.dart';
 import '../theme/app_theme.dart';
 import '../widgets/widgets.dart';
 import 'citation_tree_screen.dart';

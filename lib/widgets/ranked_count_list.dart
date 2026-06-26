@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../models/models.dart';
-import '../state/state.dart';
+import '../viewmodels/viewmodels.dart';
 import '../theme/app_theme.dart';
 
 /// Ranked list of `group_by` buckets (FR-5 journals, FR-6 authors).

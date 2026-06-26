@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import 'screens/home_shell.dart';
 import 'services/bookmark_service.dart';
 import 'services/openalex_service.dart';
-import 'state/state.dart';
+import 'viewmodels/viewmodels.dart';
 import 'theme/app_theme.dart';
 
 void main() {

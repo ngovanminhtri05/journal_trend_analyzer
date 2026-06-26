@@ -1,6 +1,7 @@
-/// State-management layer (Provider / ChangeNotifier).
+/// ViewModel layer (MVVM) — Provider / ChangeNotifier.
 ///
-/// The `ViewState` enum and the three screen providers.
+/// The `ViewState` enum and the screen ViewModels (providers). Views bind to
+/// these; no business logic lives in the Views themselves.
 library;
 
 export 'bookmark_provider.dart';
