@@ -49,7 +49,7 @@ Lab 03 changes the product significantly:
 |------|------|-----|---------|--------|
 | 2.1 | `firebase/auth_service.dart`: signInWithGoogle / signOut / authStateChanges / currentUser `[tdd:required]` | Unit test with mocked FirebaseAuth/GoogleSignIn | 1.1 | cc:done |
 | 2.2 | `AuthViewModel` + **LoginScreen** (Google button, loading/error) `[tdd:skip:ui]` | Tapping sign-in triggers flow; errors shown | 2.1 | cc:done |
-| 2.3 | **R2** Auth gate: signed-out→Login, signed-in→main shell via authStateChanges `[tdd:skip:ui]` | Real Google account signs in → Home; restart keeps session | 2.2 | blocked (R2: Firebase config) — `AuthGate` written; activate in `main.dart` per the marked comment once `firebase_options.dart` exists |
+| 2.3 | **R2** Auth gate: signed-out→Login, signed-in→main shell via authStateChanges `[tdd:skip:ui]` | Real Google account signs in → Home; restart keeps session | 2.2 | cc:done — Firebase project `journal-analyzer-3c319` configured; `AuthGate` active in `main.dart`; SHA-1 added + Google provider enabled; debug APK builds. Live sign-in pending manual on-device verification. |
 
 ## Phase 3: Navigation (4 tabs)
 
