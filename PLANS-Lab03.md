@@ -87,7 +87,7 @@ Lab 03 changes the product significantly:
 
 | Task | 内容 | DoD | Depends | Status |
 |------|------|-----|---------|--------|
-| 8.1 | ProfileScreen: profile pic/name/email + Sign Out `[tdd:skip:ui]` | Shows Google user; sign out → Login | 2.3 | cc:todo |
+| 8.1 | ProfileScreen: profile pic/name/email + Sign Out `[tdd:skip:ui]` | Shows Google user; sign out → Login | 2.3 | cc:done — UI shell binds to `AuthViewModel` (nullable lookup → placeholder when signed-out); widget-tested with a fake. Live Google account + sign-out→Login activate once `AuthGate` is wired (R2). |
 | 8.2 | Notification Center: list FCM-received messages (local store) `[tdd:skip:ui]` | Received notifications listed | 9.3 | cc:todo |
 | 8.3 | Report Export: build dashboard PDF (`pdf`) → upload Firebase Storage → show URL `[tdd:skip:ui]` | PDF uploads; download URL shown | 0.3, 4.1 | cc:todo |
 | 8.4 | Remote Config demo: fetch+apply ≥2 values (maxJournals, maxKeywords) `[tdd:required]` | Values fetched, displayed, and applied to lists | 9.4 | cc:todo |

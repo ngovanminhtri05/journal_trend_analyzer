@@ -1,14 +1,126 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-/// Profile tab (Lab 03).
+import '../theme/app_theme.dart';
+import '../viewmodels/auth_viewmodel.dart';
+
+/// Profile tab (Lab 03, task 8.1).
 ///
-/// The full Profile experience — Google account info, sign out, notification
-/// center, PDF report export, Remote Config and Crashlytics demos — is part of
-/// the Firebase phases (PLANS-Lab03 Phase 8) and is blocked until the Firebase
-/// project is configured. Until then this tab is a clear placeholder so the
-/// 4-tab shell is navigable end to end.
+/// Shows the signed-in Google account (photo / name / email) and a Sign Out
+/// action, binding to [AuthViewModel]. Pure View: the account data and the
+/// sign-out flow live in the ViewModel.
+///
+/// The [AuthViewModel] is provided by [AuthGate], which is only mounted once
+/// Firebase is configured (R2). Until then the app opens straight on the shell
+/// with no auth provider, so this screen looks the ViewModel up as nullable and
+/// falls back to a clear placeholder instead of crashing. The remaining Profile
+/// features (notification center, PDF report export, Remote Config and
+/// Crashlytics demos) are the later Firebase phases (PLANS-Lab03 Phase 8/9).
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    // Nullable lookup: returns null when no AuthViewModel is in the tree yet
+    // (app running before the Firebase auth gate is activated).
+    final vm = context.watch<AuthViewModel?>();
+    final user = vm?.user;
+
+    if (vm == null || user == null) {
+      return const _SignedOutPlaceholder();
+    }
+
+    final theme = Theme.of(context);
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: [
+        const SizedBox(height: 16),
+        Center(child: _Avatar(photoUrl: user.photoUrl, label: user.label)),
+        const SizedBox(height: 16),
+        Text(
+          user.label,
+          textAlign: TextAlign.center,
+          style: theme.textTheme.titleLarge,
+        ),
+        if (user.email != null && user.email!.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text(
+            user.email!,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodyMedium?.copyWith(color: AppTheme.muted),
+          ),
+        ],
+        const SizedBox(height: 24),
+        Card(
+          child: Column(
+            children: [
+              if (user.displayName != null && user.displayName!.isNotEmpty)
+                ListTile(
+                  leading: const Icon(Icons.person_outline),
+                  title: const Text('Name'),
+                  subtitle: Text(user.displayName!),
+                ),
+              if (user.email != null && user.email!.isNotEmpty)
+                ListTile(
+                  leading: const Icon(Icons.email_outlined),
+                  title: const Text('Email'),
+                  subtitle: Text(user.email!),
+                ),
+              ListTile(
+                leading: const Icon(Icons.badge_outlined),
+                title: const Text('User ID'),
+                subtitle: Text(user.uid),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        FilledButton.icon(
+          onPressed: vm.signOut,
+          icon: const Icon(Icons.logout),
+          label: const Text('Sign out'),
+          style: FilledButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Circular account picture, falling back to the account initial when there is
+/// no photo URL (or it fails to load).
+class _Avatar extends StatelessWidget {
+  const _Avatar({required this.photoUrl, required this.label});
+
+  final String? photoUrl;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final initial = label.isNotEmpty ? label[0].toUpperCase() : '?';
+    final fallback = Text(
+      initial,
+      style: theme.textTheme.headlineMedium?.copyWith(
+        color: theme.colorScheme.onPrimaryContainer,
+      ),
+    );
+    return CircleAvatar(
+      radius: 44,
+      backgroundColor: theme.colorScheme.primaryContainer,
+      foregroundImage: (photoUrl != null && photoUrl!.isNotEmpty)
+          ? NetworkImage(photoUrl!)
+          : null,
+      child: fallback,
+    );
+  }
+}
+
+/// Shown when no user is signed in — i.e. the app is running before the Firebase
+/// auth gate is configured. Keeps the 4-tab shell navigable end to end.
+class _SignedOutPlaceholder extends StatelessWidget {
+  const _SignedOutPlaceholder();
 
   @override
   Widget build(BuildContext context) {
@@ -30,8 +142,9 @@ class ProfileScreen extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          'Google Sign-In, notifications, PDF report export and the Firebase '
-          'demos arrive once the Firebase project is configured.',
+          'Sign in with Google to see your account here. Notifications, PDF '
+          'report export and the Firebase demos arrive once the Firebase '
+          'project is configured.',
           textAlign: TextAlign.center,
           style: theme.textTheme.bodyMedium,
         ),
