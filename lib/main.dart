@@ -1,13 +1,27 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'screens/home_shell.dart';
+import 'firebase/auth_service.dart';
+import 'firebase_options.dart';
+import 'screens/auth_gate.dart';
 import 'services/bookmark_service.dart';
 import 'services/openalex_service.dart';
 import 'viewmodels/viewmodels.dart';
 import 'theme/app_theme.dart';
 
-void main() {
+/// Web OAuth 2.0 client id (google-services.json `oauth_client` type 3). Google
+/// Sign-In v7 needs it as `serverClientId` to return the id token Firebase
+/// exchanges for a session.
+const String _googleServerClientId =
+    '61025513530-0a5q3gqj4gfp7rc0iv2cdh2f1m55r8c8.apps.googleusercontent.com';
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  GoogleSignInAuthenticator.serverClientId = _googleServerClientId;
   runApp(const JournalTrendApp());
 }
 
@@ -17,7 +31,12 @@ void main() {
 /// app is torn down) plus the three screen providers. The service can be
 /// injected for tests.
 class JournalTrendApp extends StatefulWidget {
-  const JournalTrendApp({super.key, this.service, this.bookmarkService});
+  const JournalTrendApp({
+    super.key,
+    this.service,
+    this.bookmarkService,
+    this.home,
+  });
 
   /// Polite-pool contact sent on every OpenAlex request.
   static const String mailto = 'ngovanminhtri05@gmail.com';
@@ -28,6 +47,10 @@ class JournalTrendApp extends StatefulWidget {
   /// Optional injected bookmark service (tests). When null, one is created
   /// internally (it resolves shared-preferences lazily — see [BookmarkService]).
   final BookmarkService? bookmarkService;
+
+  /// Optional root screen override. Defaults to [AuthGate] in production; tests
+  /// pass a Firebase-free widget (e.g. HomeShell) to skip the auth gate.
+  final Widget? home;
 
   @override
   State<JournalTrendApp> createState() => _JournalTrendAppState();
@@ -70,13 +93,10 @@ class _JournalTrendAppState extends State<JournalTrendApp> {
         title: 'Journal Trend Analyzer',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.build(),
-        // PLANS-Lab03 task 2.3 — activate the Google Sign-In gate once Firebase
-        // is configured (R2): in `main()` add `await Firebase.initializeApp(...)`
-        // with the generated `firebase_options.dart`, then swap this line for
-        // `home: const AuthGate()`. AuthGate resolves FirebaseAuth lazily, so it
-        // must only mount after Firebase init — hence the app still opens on the
-        // HomeShell until credentials land.
-        home: const HomeShell(),
+        // PLANS-Lab03 task 2.3 — Google Sign-In gate (active now that Firebase
+        // is configured). Signed-out users see LoginScreen; signed-in users the
+        // HomeShell. AuthGate owns the AuthViewModel above the tab tree.
+        home: widget.home ?? const AuthGate(),
       ),
     );
   }
