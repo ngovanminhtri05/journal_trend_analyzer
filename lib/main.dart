@@ -70,6 +70,12 @@ class _JournalTrendAppState extends State<JournalTrendApp> {
         title: 'Journal Trend Analyzer',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.build(),
+        // PLANS-Lab03 task 2.3 — activate the Google Sign-In gate once Firebase
+        // is configured (R2): in `main()` add `await Firebase.initializeApp(...)`
+        // with the generated `firebase_options.dart`, then swap this line for
+        // `home: const AuthGate()`. AuthGate resolves FirebaseAuth lazily, so it
+        // must only mount after Firebase init — hence the app still opens on the
+        // HomeShell until credentials land.
         home: const HomeShell(),
       ),
     );
