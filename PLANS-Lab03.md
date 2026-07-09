@@ -90,7 +90,7 @@ Lab 03 changes the product significantly:
 | 8.1 | ProfileScreen: profile pic/name/email + Sign Out `[tdd:skip:ui]` | Shows Google user; sign out → Login | 2.3 | cc:done — UI shell binds to `AuthViewModel` (nullable lookup → placeholder when signed-out); widget-tested with a fake. Live Google account + sign-out→Login activate once `AuthGate` is wired (R2). |
 | 8.2 | Notification Center: list FCM-received messages (local store) `[tdd:skip:ui]` | Received notifications listed | 9.3 | cc:todo |
 | 8.3 | Report Export: build dashboard PDF (`pdf`) → upload Firebase Storage → show URL `[tdd:skip:ui]` | PDF uploads; download URL shown | 0.3, 4.1 | cc:todo |
-| 8.4 | Remote Config demo: fetch+apply ≥2 values (maxJournals, maxKeywords) `[tdd:required]` | Values fetched, displayed, and applied to lists | 9.4 | cc:todo |
+| 8.4 | Remote Config demo: fetch+apply ≥2 values (maxJournals, maxKeywords) `[tdd:required]` | Values fetched, displayed, and applied to lists | 9.4 | cc:done — `max_journals`/`max_keywords` drive the Journals/Keywords list lengths and are displayed on a Profile "Remote Config" card. Unit-tested. Create the two params in console to demo server override. |
 | 8.5 | Crashlytics demo: handled-exception + test-crash buttons `[tdd:skip:ui]` | Both appear in Crashlytics console | 9.2 | cc:todo |
 
 ## Phase 9: Firebase cross-cutting
@@ -100,7 +100,7 @@ Lab 03 changes the product significantly:
 | 9.1 | `firebase/analytics_service.dart` + log events: login, search_topic(keyword), view_publication(title,year), view_journal(name), view_keyword(keyword), export_pdf(topic), logout `[tdd:skip:integration]` | All 7 events visible in Analytics DebugView | 1.1 | cc:done — `AnalyticsApi`/`AnalyticsService` + `NoopAnalytics`; wired login/logout (AuthViewModel), search_topic (HomeViewModel), view_publication/journal/keyword (via `LogScreenView`); export_pdf method ready for 8.3. Unit-tested. DebugView capture pending manual. |
 | 9.2 | Crashlytics init: FlutterError + PlatformDispatcher.onError handlers in `main` `[tdd:skip:config]` | Forced crash reported to console | 0.2 | cc:todo |
 | 9.3 | **R3** FCM: permission + token + foreground/background handlers → Notification Center `[tdd:skip:integration]` | Console push received on device | 0.2 | cc:todo |
-| 9.4 | Remote Config: defaults + fetchAndActivate at startup `[tdd:skip:config]` | Config available app-wide | 0.2 | cc:todo |
+| 9.4 | Remote Config: defaults + fetchAndActivate at startup `[tdd:skip:config]` | Config available app-wide | 0.2 | cc:done — `RemoteConfigService.initialize()` (setDefaults + fetchAndActivate, cached to ints) runs in `main()` before `runApp`; provided app-wide as `RemoteConfigApi`; `StaticRemoteConfig` for tests. |
 
 ## Phase 10: Patrol E2E (11 cases)
 

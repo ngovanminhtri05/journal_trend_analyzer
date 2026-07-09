@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import 'firebase/analytics_service.dart';
 import 'firebase/auth_service.dart';
+import 'firebase/remote_config_service.dart';
 import 'firebase_options.dart';
 import 'screens/auth_gate.dart';
 import 'services/bookmark_service.dart';
@@ -21,7 +22,13 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   GoogleSignInAuthenticator.serverClientId = _googleServerClientId;
-  runApp(const JournalTrendApp());
+
+  // Remote Config: fetch + activate tunables before the first frame so the
+  // lists render with the server values (falls back to in-code defaults).
+  final remoteConfig = RemoteConfigService();
+  await remoteConfig.initialize();
+
+  runApp(JournalTrendApp(remoteConfig: remoteConfig));
 }
 
 /// Root app widget.
@@ -35,6 +42,7 @@ class JournalTrendApp extends StatefulWidget {
     this.service,
     this.bookmarkService,
     this.analytics,
+    this.remoteConfig,
     this.home,
   });
 
@@ -51,6 +59,10 @@ class JournalTrendApp extends StatefulWidget {
   /// Optional injected analytics backend (tests). When null, a Firebase-backed
   /// [AnalyticsService] is used (it resolves FirebaseAnalytics lazily).
   final AnalyticsApi? analytics;
+
+  /// Optional injected Remote Config (tests). When null, an uninitialised
+  /// [RemoteConfigService] is used, which simply reports the in-code defaults.
+  final RemoteConfigApi? remoteConfig;
 
   /// Optional root screen override. Defaults to [AuthGate] in production; tests
   /// pass a Firebase-free widget (e.g. HomeShell) to skip the auth gate.
@@ -69,6 +81,9 @@ class _JournalTrendAppState extends State<JournalTrendApp> {
 
   late final AnalyticsApi _analytics = widget.analytics ?? AnalyticsService();
 
+  late final RemoteConfigApi _remoteConfig =
+      widget.remoteConfig ?? RemoteConfigService();
+
   /// Only dispose a service we created ourselves; an injected one is owned by
   /// the test that provided it.
   bool get _ownsService => widget.service == null;
@@ -85,6 +100,7 @@ class _JournalTrendAppState extends State<JournalTrendApp> {
       providers: [
         Provider<OpenAlexService>.value(value: _service),
         Provider<AnalyticsApi>.value(value: _analytics),
+        Provider<RemoteConfigApi>.value(value: _remoteConfig),
         ChangeNotifierProvider(create: (_) => FilterProvider(_service)),
         ChangeNotifierProvider(create: (_) => SearchProvider(_service)),
         ChangeNotifierProvider(create: (_) => TrendProvider(_service)),

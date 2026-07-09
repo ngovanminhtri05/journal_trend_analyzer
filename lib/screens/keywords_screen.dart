@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../firebase/firebase.dart';
 import '../models/models.dart';
 import '../services/openalex_service.dart';
 import '../theme/app_theme.dart';
@@ -49,12 +50,14 @@ class KeywordsScreen extends StatelessWidget {
       case ViewState.success:
         final theme = Theme.of(context);
         final maxCount = vm.keywords.first.count;
+        // Remote Config (task 8.4): the list length is server-tunable.
+        final maxKeywords = context.read<RemoteConfigApi>().maxKeywords;
         return ListView(
           padding: const EdgeInsets.all(16),
           children: [
             Text('Most frequent keywords', style: theme.textTheme.titleSmall),
             const SizedBox(height: 8),
-            for (var i = 0; i < vm.keywords.length && i < 20; i++)
+            for (var i = 0; i < vm.keywords.length && i < maxKeywords; i++)
               KeywordRankRow(
                 rank: i + 1,
                 item: vm.keywords[i],

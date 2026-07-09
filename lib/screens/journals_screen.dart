@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../firebase/firebase.dart';
 import '../models/models.dart';
 import '../services/openalex_service.dart';
 import '../viewmodels/viewmodels.dart';
@@ -46,6 +47,8 @@ class JournalsScreen extends StatelessWidget {
         return EmptyView(message: 'No journals found for "${vm.lastQuery}".');
       case ViewState.success:
         final theme = Theme.of(context);
+        // Remote Config (task 8.4): the list length is server-tunable.
+        final maxJournals = context.read<RemoteConfigApi>().maxJournals;
         return ListView(
           padding: const EdgeInsets.all(16),
           children: [
@@ -60,7 +63,7 @@ class JournalsScreen extends StatelessWidget {
             RankedCountList(
               items: vm.journals,
               bookmarkType: BookmarkType.journal,
-              limit: 15,
+              limit: maxJournals,
               onItemTap: (item) => Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => JournalDetailScreen(journal: item),

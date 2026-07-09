@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../firebase/remote_config_service.dart';
 import '../theme/app_theme.dart';
 import '../viewmodels/auth_viewmodel.dart';
 
@@ -35,7 +36,9 @@ class ProfileScreen extends StatelessWidget {
       padding: const EdgeInsets.all(24),
       children: [
         const SizedBox(height: 16),
-        Center(child: _Avatar(photoUrl: user.photoUrl, label: user.label)),
+        Center(
+          child: _Avatar(photoUrl: user.photoUrl, label: user.label),
+        ),
         const SizedBox(height: 16),
         Text(
           user.label,
@@ -75,6 +78,8 @@ class ProfileScreen extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 24),
+        const _RemoteConfigCard(),
+        const SizedBox(height: 24),
         FilledButton.icon(
           onPressed: vm.signOut,
           icon: const Icon(Icons.logout),
@@ -84,6 +89,39 @@ class ProfileScreen extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Remote Config demo (task 8.4): shows the two server-tunable values that
+/// drive the Journals / Keywords list lengths.
+class _RemoteConfigCard extends StatelessWidget {
+  const _RemoteConfigCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final config = context.watch<RemoteConfigApi?>();
+    if (config == null) return const SizedBox.shrink();
+    return Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: Text('Remote Config'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.tune),
+            title: const Text('Max journals'),
+            trailing: Text('${config.maxJournals}'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.tune),
+            title: const Text('Max keywords'),
+            trailing: Text('${config.maxKeywords}'),
+          ),
+        ],
+      ),
     );
   }
 }
