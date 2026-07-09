@@ -1,8 +1,10 @@
 import 'package:flutter/foundation.dart';
 
 import '../firebase/analytics_service.dart';
+import '../firebase/storage_service.dart';
 import '../models/models.dart';
 import '../services/openalex_service.dart';
+import '../services/report_builder.dart';
 import '../services/trend_classifier.dart';
 import '../utils/utils.dart';
 import 'dashboard_provider.dart' show DashboardSummary;
@@ -15,15 +17,31 @@ import 'view_state.dart';
 /// [DashboardSummary] plus the per-year buckets that feed the trend chart.
 /// The View binds to this; it holds no business logic of its own.
 class HomeViewModel extends ChangeNotifier {
-  HomeViewModel(this._service, {AnalyticsApi? analytics})
-    : _analytics = analytics;
+  HomeViewModel(
+    this._service, {
+    AnalyticsApi? analytics,
+    ReportStorageApi? storage,
+  }) : _analytics = analytics,
+       _storage = storage;
 
   final OpenAlexService _service;
   final AnalyticsApi? _analytics;
+  final ReportStorageApi? _storage;
 
   ViewState state = ViewState.idle;
   String? errorMessage;
   String lastQuery = '';
+
+  /// PDF-report export state (task 8.3). [reportUrl] holds the Storage download
+  /// URL after a successful upload; [exportError] a user-facing failure message.
+  bool isExporting = false;
+  String? reportUrl;
+  String? exportError;
+
+  /// Whether a report can be exported right now (a successful overview loaded,
+  /// storage available, and no export already running).
+  bool get canExport =>
+      state == ViewState.success && summary != null && _storage != null;
 
   /// The six aggregate insights (total / avg citations / most-active year /
   /// top journal / top author / most-influential paper).
@@ -90,4 +108,48 @@ class HomeViewModel extends ChangeNotifier {
   }
 
   Future<void> retry() => search(lastQuery);
+
+  /// Builds the dashboard PDF for the current overview, uploads it to Firebase
+  /// Storage under [uid], and exposes the download URL (task 8.3). Fires the
+  /// `export_pdf` analytics event on success.
+  Future<void> exportReport({required String uid}) async {
+    final s = summary;
+    final storage = _storage;
+    if (s == null || storage == null || isExporting) return;
+
+    isExporting = true;
+    exportError = null;
+    reportUrl = null;
+    notifyListeners();
+
+    try {
+      final bytes = await buildDashboardReportPdf(
+        topic: lastQuery,
+        totalPublications: s.totalPublications,
+        averageCitations: s.averageCitations,
+        mostActiveYear: s.mostActiveYear,
+        topJournal: s.topJournal,
+        topAuthor: s.topAuthor,
+        mostInfluentialTitle: s.mostInfluential?.title,
+        years: yearCounts,
+        trendLabel: trendClassification?.category.name,
+      );
+      final slug = lastQuery.isEmpty
+          ? 'report'
+          : lastQuery.replaceAll(RegExp(r'[^A-Za-z0-9]+'), '_');
+      final fileName =
+          'report_${slug}_${DateTime.now().millisecondsSinceEpoch}.pdf';
+      reportUrl = await storage.uploadReport(
+        uid: uid,
+        bytes: bytes,
+        fileName: fileName,
+      );
+      _analytics?.logExportPdf(lastQuery);
+    } catch (_) {
+      exportError = 'Failed to export the report. Please try again.';
+    }
+
+    isExporting = false;
+    notifyListeners();
+  }
 }

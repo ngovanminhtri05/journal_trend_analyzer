@@ -9,6 +9,7 @@ import 'firebase/analytics_service.dart';
 import 'firebase/auth_service.dart';
 import 'firebase/crash_reporter_service.dart';
 import 'firebase/remote_config_service.dart';
+import 'firebase/storage_service.dart';
 import 'firebase_options.dart';
 import 'screens/auth_gate.dart';
 import 'services/bookmark_service.dart';
@@ -56,6 +57,7 @@ class JournalTrendApp extends StatefulWidget {
     this.analytics,
     this.remoteConfig,
     this.crashReporter,
+    this.storage,
     this.home,
   });
 
@@ -81,6 +83,10 @@ class JournalTrendApp extends StatefulWidget {
   /// [CrashlyticsService] is used (it resolves FirebaseCrashlytics lazily).
   final CrashReporterApi? crashReporter;
 
+  /// Optional injected report storage (tests). When null, a Firebase-backed
+  /// [StorageService] is used (it resolves FirebaseStorage lazily).
+  final ReportStorageApi? storage;
+
   /// Optional root screen override. Defaults to [AuthGate] in production; tests
   /// pass a Firebase-free widget (e.g. HomeShell) to skip the auth gate.
   final Widget? home;
@@ -103,6 +109,8 @@ class _JournalTrendAppState extends State<JournalTrendApp> {
 
   late final CrashReporterApi _crashReporter =
       widget.crashReporter ?? CrashlyticsService();
+
+  late final ReportStorageApi _storage = widget.storage ?? StorageService();
 
   /// Only dispose a service we created ourselves; an injected one is owned by
   /// the test that provided it.
@@ -132,7 +140,8 @@ class _JournalTrendAppState extends State<JournalTrendApp> {
         ),
         // Lab 03 tab ViewModels (Home / Journals / Keywords).
         ChangeNotifierProvider(
-          create: (_) => HomeViewModel(_service, analytics: _analytics),
+          create: (_) =>
+              HomeViewModel(_service, analytics: _analytics, storage: _storage),
         ),
         ChangeNotifierProvider(create: (_) => JournalsViewModel(_service)),
         ChangeNotifierProvider(create: (_) => KeywordsViewModel(_service)),

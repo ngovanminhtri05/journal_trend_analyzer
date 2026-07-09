@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../viewmodels/viewmodels.dart';
@@ -63,7 +64,11 @@ class _Overview extends StatelessWidget {
     final trend = vm.trendClassification;
 
     final metrics = <_Metric>[
-      _Metric(Icons.article_outlined, 'Total publications', '${s.totalPublications}'),
+      _Metric(
+        Icons.article_outlined,
+        'Total publications',
+        '${s.totalPublications}',
+      ),
       _Metric(
         Icons.format_quote_outlined,
         'Avg. citations',
@@ -92,9 +97,34 @@ class _Overview extends StatelessWidget {
             ],
           ),
         ),
+        if (vm.canExport || vm.isExporting)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: FilledButton.tonalIcon(
+                onPressed: vm.isExporting
+                    ? null
+                    : () => _exportReport(context, vm),
+                icon: vm.isExporting
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.picture_as_pdf_outlined),
+                label: Text(
+                  vm.isExporting ? 'Exporting…' : 'Export PDF report',
+                ),
+              ),
+            ),
+          ),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-          child: Text('Publications over time', style: theme.textTheme.titleSmall),
+          child: Text(
+            'Publications over time',
+            style: theme.textTheme.titleSmall,
+          ),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -122,6 +152,49 @@ class _Overview extends StatelessWidget {
         const SizedBox(height: 16),
       ],
     );
+  }
+}
+
+/// Builds + uploads the dashboard PDF, then shows the download URL (or an
+/// error). The signed-in uid (from the auth gate) scopes the Storage path.
+Future<void> _exportReport(BuildContext context, HomeViewModel vm) async {
+  final uid = context.read<AuthViewModel?>()?.user?.uid ?? 'anonymous';
+  final messenger = ScaffoldMessenger.of(context);
+  await vm.exportReport(uid: uid);
+  if (!context.mounted) return;
+
+  final url = vm.reportUrl;
+  if (url != null) {
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Report uploaded'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Your PDF report is stored in Firebase Storage:'),
+            const SizedBox(height: 8),
+            SelectableText(url, style: Theme.of(ctx).textTheme.bodySmall),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              await Clipboard.setData(ClipboardData(text: url));
+              if (ctx.mounted) Navigator.pop(ctx);
+            },
+            child: const Text('Copy link'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Done'),
+          ),
+        ],
+      ),
+    );
+  } else if (vm.exportError != null) {
+    messenger.showSnackBar(SnackBar(content: Text(vm.exportError!)));
   }
 }
 

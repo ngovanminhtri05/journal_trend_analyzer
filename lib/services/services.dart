@@ -9,5 +9,6 @@ export 'bookmark_service.dart';
 export 'citation_formatter.dart';
 export 'openalex_exceptions.dart';
 export 'openalex_service.dart';
+export 'report_builder.dart';
 export 'research_gap.dart';
 export 'trend_classifier.dart';

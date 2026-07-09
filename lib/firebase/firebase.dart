@@ -12,3 +12,4 @@ export 'app_user.dart';
 export 'auth_service.dart';
 export 'crash_reporter_service.dart';
 export 'remote_config_service.dart';
+export 'storage_service.dart';
