@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../firebase/crash_reporter_service.dart';
 import '../firebase/remote_config_service.dart';
 import '../theme/app_theme.dart';
 import '../viewmodels/auth_viewmodel.dart';
@@ -79,6 +80,8 @@ class ProfileScreen extends StatelessWidget {
         ),
         const SizedBox(height: 24),
         const _RemoteConfigCard(),
+        const SizedBox(height: 16),
+        const _CrashlyticsCard(),
         const SizedBox(height: 24),
         FilledButton.icon(
           onPressed: vm.signOut,
@@ -123,6 +126,81 @@ class _RemoteConfigCard extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// Crashlytics demo (task 8.5): a handled (non-fatal) error and a forced test
+/// crash, so both paths can be shown landing in the Crashlytics console.
+class _CrashlyticsCard extends StatelessWidget {
+  const _CrashlyticsCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final reporter = context.watch<CrashReporterApi?>();
+    if (reporter == null) return const SizedBox.shrink();
+    return Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: Text('Crashlytics'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.report_gmailerrorred_outlined),
+            title: const Text('Log handled error'),
+            subtitle: const Text('Records a non-fatal error'),
+            onTap: () async {
+              final messenger = ScaffoldMessenger.of(context);
+              await reporter.log('User tapped the handled-error demo.');
+              await reporter.recordError(
+                Exception('Demo handled exception from Profile'),
+                StackTrace.current,
+                reason: 'crashlytics-demo-handled',
+              );
+              messenger.showSnackBar(
+                const SnackBar(
+                  content: Text('Handled error sent to Crashlytics.'),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.bug_report_outlined),
+            title: const Text('Force test crash'),
+            subtitle: const Text('Crashes the app; report uploads on relaunch'),
+            onTap: () => _confirmCrash(context, reporter),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _confirmCrash(
+    BuildContext context,
+    CrashReporterApi reporter,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Force a test crash?'),
+        content: const Text(
+          'The app will close immediately. The crash report uploads to '
+          'Crashlytics the next time you open the app.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Crash'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed ?? false) reporter.forceCrash();
   }
 }
 

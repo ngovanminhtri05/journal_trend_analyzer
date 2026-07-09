@@ -91,14 +91,14 @@ Lab 03 changes the product significantly:
 | 8.2 | Notification Center: list FCM-received messages (local store) `[tdd:skip:ui]` | Received notifications listed | 9.3 | cc:todo |
 | 8.3 | Report Export: build dashboard PDF (`pdf`) → upload Firebase Storage → show URL `[tdd:skip:ui]` | PDF uploads; download URL shown | 0.3, 4.1 | cc:todo |
 | 8.4 | Remote Config demo: fetch+apply ≥2 values (maxJournals, maxKeywords) `[tdd:required]` | Values fetched, displayed, and applied to lists | 9.4 | cc:done — `max_journals`/`max_keywords` drive the Journals/Keywords list lengths and are displayed on a Profile "Remote Config" card. Unit-tested. Create the two params in console to demo server override. |
-| 8.5 | Crashlytics demo: handled-exception + test-crash buttons `[tdd:skip:ui]` | Both appear in Crashlytics console | 9.2 | cc:todo |
+| 8.5 | Crashlytics demo: handled-exception + test-crash buttons `[tdd:skip:ui]` | Both appear in Crashlytics console | 9.2 | cc:done — Profile "Crashlytics" card: "Log handled error" (recordError non-fatal) + "Force test crash" (crash(), confirm dialog). Handled-error path widget-tested. Console capture pending manual on-device. |
 
 ## Phase 9: Firebase cross-cutting
 
 | Task | 内容 | DoD | Depends | Status |
 |------|------|-----|---------|--------|
 | 9.1 | `firebase/analytics_service.dart` + log events: login, search_topic(keyword), view_publication(title,year), view_journal(name), view_keyword(keyword), export_pdf(topic), logout `[tdd:skip:integration]` | All 7 events visible in Analytics DebugView | 1.1 | cc:done — `AnalyticsApi`/`AnalyticsService` + `NoopAnalytics`; wired login/logout (AuthViewModel), search_topic (HomeViewModel), view_publication/journal/keyword (via `LogScreenView`); export_pdf method ready for 8.3. Unit-tested. DebugView capture pending manual. |
-| 9.2 | Crashlytics init: FlutterError + PlatformDispatcher.onError handlers in `main` `[tdd:skip:config]` | Forced crash reported to console | 0.2 | cc:todo |
+| 9.2 | Crashlytics init: FlutterError + PlatformDispatcher.onError handlers in `main` `[tdd:skip:config]` | Forced crash reported to console | 0.2 | cc:done — `FlutterError.onError`→`recordFlutterFatalError` + `PlatformDispatcher.onError`→`recordError(fatal)` in `main()`; Crashlytics Gradle plugin 3.0.2 added, google-services bumped to 4.4.2; `CrashReporterApi`/`CrashlyticsService`+`NoopCrashReporter`. Enable Crashlytics in console to view reports. |
 | 9.3 | **R3** FCM: permission + token + foreground/background handlers → Notification Center `[tdd:skip:integration]` | Console push received on device | 0.2 | cc:todo |
 | 9.4 | Remote Config: defaults + fetchAndActivate at startup `[tdd:skip:config]` | Config available app-wide | 0.2 | cc:done — `RemoteConfigService.initialize()` (setDefaults + fetchAndActivate, cached to ints) runs in `main()` before `runApp`; provided app-wide as `RemoteConfigApi`; `StaticRemoteConfig` for tests. |
 

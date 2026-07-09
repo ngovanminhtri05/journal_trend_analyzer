@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:journal_trend_analyzer/firebase/app_user.dart';
 import 'package:journal_trend_analyzer/firebase/auth_service.dart';
+import 'package:journal_trend_analyzer/firebase/crash_reporter_service.dart';
 import 'package:journal_trend_analyzer/screens/profile_screen.dart';
 import 'package:journal_trend_analyzer/viewmodels/auth_viewmodel.dart';
 import 'package:provider/provider.dart';
@@ -28,6 +29,23 @@ class _FakeAuthApi implements AuthApi {
   Future<void> signOut() async => didSignOut = true;
 
   void dispose() => _controller.close();
+}
+
+/// Records crash-reporter calls for the demo-button test.
+class _RecordingCrashReporter implements CrashReporterApi {
+  int handledErrors = 0;
+  int crashes = 0;
+
+  @override
+  Future<void> recordError(
+    Object error,
+    StackTrace? stack, {
+    String? reason,
+  }) async => handledErrors++;
+  @override
+  Future<void> log(String message) async {}
+  @override
+  void forceCrash() => crashes++;
 }
 
 // No photoUrl so the widget shows the initial and never hits the network in tests.
@@ -96,6 +114,37 @@ void main() {
       await tester.pump();
 
       expect(api.didSignOut, isTrue);
+    });
+
+    testWidgets('Crashlytics demo: handled-error button reports an error', (
+      tester,
+    ) async {
+      final api = _FakeAuthApi();
+      final vm = AuthViewModel(api);
+      final reporter = _RecordingCrashReporter();
+      addTearDown(() {
+        vm.dispose();
+        api.dispose();
+      });
+
+      api.emit(_ada);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MultiProvider(
+            providers: [
+              ChangeNotifierProvider<AuthViewModel>.value(value: vm),
+              Provider<CrashReporterApi>.value(value: reporter),
+            ],
+            child: const Scaffold(body: ProfileScreen()),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      await tester.tap(find.text('Log handled error'));
+      await tester.pump();
+
+      expect(reporter.handledErrors, 1);
     });
   });
 }

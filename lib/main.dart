@@ -1,9 +1,13 @@
+import 'dart:ui';
+
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'firebase/analytics_service.dart';
 import 'firebase/auth_service.dart';
+import 'firebase/crash_reporter_service.dart';
 import 'firebase/remote_config_service.dart';
 import 'firebase_options.dart';
 import 'screens/auth_gate.dart';
@@ -22,6 +26,14 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   GoogleSignInAuthenticator.serverClientId = _googleServerClientId;
+
+  // Crashlytics (task 9.2): route uncaught Flutter + platform errors to
+  // Crashlytics so they are reported to the console.
+  FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+  PlatformDispatcher.instance.onError = (error, stack) {
+    FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+    return true;
+  };
 
   // Remote Config: fetch + activate tunables before the first frame so the
   // lists render with the server values (falls back to in-code defaults).
@@ -43,6 +55,7 @@ class JournalTrendApp extends StatefulWidget {
     this.bookmarkService,
     this.analytics,
     this.remoteConfig,
+    this.crashReporter,
     this.home,
   });
 
@@ -64,6 +77,10 @@ class JournalTrendApp extends StatefulWidget {
   /// [RemoteConfigService] is used, which simply reports the in-code defaults.
   final RemoteConfigApi? remoteConfig;
 
+  /// Optional injected crash reporter (tests). When null, a Firebase-backed
+  /// [CrashlyticsService] is used (it resolves FirebaseCrashlytics lazily).
+  final CrashReporterApi? crashReporter;
+
   /// Optional root screen override. Defaults to [AuthGate] in production; tests
   /// pass a Firebase-free widget (e.g. HomeShell) to skip the auth gate.
   final Widget? home;
@@ -84,6 +101,9 @@ class _JournalTrendAppState extends State<JournalTrendApp> {
   late final RemoteConfigApi _remoteConfig =
       widget.remoteConfig ?? RemoteConfigService();
 
+  late final CrashReporterApi _crashReporter =
+      widget.crashReporter ?? CrashlyticsService();
+
   /// Only dispose a service we created ourselves; an injected one is owned by
   /// the test that provided it.
   bool get _ownsService => widget.service == null;
@@ -101,6 +121,7 @@ class _JournalTrendAppState extends State<JournalTrendApp> {
         Provider<OpenAlexService>.value(value: _service),
         Provider<AnalyticsApi>.value(value: _analytics),
         Provider<RemoteConfigApi>.value(value: _remoteConfig),
+        Provider<CrashReporterApi>.value(value: _crashReporter),
         ChangeNotifierProvider(create: (_) => FilterProvider(_service)),
         ChangeNotifierProvider(create: (_) => SearchProvider(_service)),
         ChangeNotifierProvider(create: (_) => TrendProvider(_service)),
