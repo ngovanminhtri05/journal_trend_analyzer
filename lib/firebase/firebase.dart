@@ -7,5 +7,6 @@
 /// Exports grow as each Firebase phase (PLANS-Lab03 Phase 2/8/9) lands.
 library;
 
+export 'analytics_service.dart';
 export 'app_user.dart';
 export 'auth_service.dart';

@@ -97,7 +97,7 @@ Lab 03 changes the product significantly:
 
 | Task | 内容 | DoD | Depends | Status |
 |------|------|-----|---------|--------|
-| 9.1 | `firebase/analytics_service.dart` + log events: login, search_topic(keyword), view_publication(title,year), view_journal(name), view_keyword(keyword), export_pdf(topic), logout `[tdd:skip:integration]` | All 7 events visible in Analytics DebugView | 1.1 | cc:todo |
+| 9.1 | `firebase/analytics_service.dart` + log events: login, search_topic(keyword), view_publication(title,year), view_journal(name), view_keyword(keyword), export_pdf(topic), logout `[tdd:skip:integration]` | All 7 events visible in Analytics DebugView | 1.1 | cc:done — `AnalyticsApi`/`AnalyticsService` + `NoopAnalytics`; wired login/logout (AuthViewModel), search_topic (HomeViewModel), view_publication/journal/keyword (via `LogScreenView`); export_pdf method ready for 8.3. Unit-tested. DebugView capture pending manual. |
 | 9.2 | Crashlytics init: FlutterError + PlatformDispatcher.onError handlers in `main` `[tdd:skip:config]` | Forced crash reported to console | 0.2 | cc:todo |
 | 9.3 | **R3** FCM: permission + token + foreground/background handlers → Notification Center `[tdd:skip:integration]` | Console push received on device | 0.2 | cc:todo |
 | 9.4 | Remote Config: defaults + fetchAndActivate at startup `[tdd:skip:config]` | Config available app-wide | 0.2 | cc:todo |

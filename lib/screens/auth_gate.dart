@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../firebase/analytics_service.dart';
 import '../firebase/auth_service.dart';
 import '../viewmodels/auth_viewmodel.dart';
 import 'home_shell.dart';
@@ -23,7 +24,10 @@ class AuthGate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => AuthViewModel(auth ?? AuthService()),
+      create: (context) => AuthViewModel(
+        auth ?? AuthService(),
+        analytics: context.read<AnalyticsApi?>(),
+      ),
       child: Consumer<AuthViewModel>(
         builder: (context, vm, _) {
           switch (vm.status) {

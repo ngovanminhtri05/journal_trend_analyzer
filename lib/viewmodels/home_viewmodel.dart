@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../firebase/analytics_service.dart';
 import '../models/models.dart';
 import '../services/openalex_service.dart';
 import '../services/trend_classifier.dart';
@@ -14,9 +15,11 @@ import 'view_state.dart';
 /// [DashboardSummary] plus the per-year buckets that feed the trend chart.
 /// The View binds to this; it holds no business logic of its own.
 class HomeViewModel extends ChangeNotifier {
-  HomeViewModel(this._service);
+  HomeViewModel(this._service, {AnalyticsApi? analytics})
+    : _analytics = analytics;
 
   final OpenAlexService _service;
+  final AnalyticsApi? _analytics;
 
   ViewState state = ViewState.idle;
   String? errorMessage;
@@ -41,6 +44,9 @@ class HomeViewModel extends ChangeNotifier {
     state = ViewState.loading;
     errorMessage = null;
     notifyListeners();
+
+    // Analytics: search_topic{keyword}. Fire-and-forget; never blocks the fetch.
+    _analytics?.logSearchTopic(query);
 
     try {
       final results = await Future.wait([

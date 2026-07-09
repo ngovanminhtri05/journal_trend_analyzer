@@ -6,6 +6,7 @@ library;
 export 'citation_export.dart';
 export 'comparison_chart.dart';
 export 'filter_panel.dart';
+export 'log_screen_view.dart';
 export 'paper_card.dart';
 export 'ranked_count_list.dart';
 export 'responsive_body.dart';

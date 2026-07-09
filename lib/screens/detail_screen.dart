@@ -23,99 +23,116 @@ class DetailScreen extends StatelessWidget {
     final doiUrl = _doiUrl(work.doi);
 
     final bookmarks = context.watch<BookmarkProvider>();
-    final saved = bookmarks.isBookmarked(BookmarkType.work, work.id ?? work.title);
+    final saved = bookmarks.isBookmarked(
+      BookmarkType.work,
+      work.id ?? work.title,
+    );
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Publication'),
-        actions: [
-          IconButton(
-            tooltip: 'Citation tree',
-            icon: const Icon(Icons.account_tree_outlined),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => CitationTreeScreen(root: work),
+    return LogScreenView(
+      log: (analytics) => analytics.logViewPublication(
+        title: work.title,
+        year: work.publicationYear,
+      ),
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Publication'),
+          actions: [
+            IconButton(
+              tooltip: 'Citation tree',
+              icon: const Icon(Icons.account_tree_outlined),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => CitationTreeScreen(root: work),
+                ),
               ),
             ),
-          ),
-          IconButton(
-            tooltip: 'Export citation',
-            icon: const Icon(Icons.ios_share),
-            onPressed: () => showCitationSheet(context, work),
-          ),
-          IconButton(
-            tooltip: saved ? 'Remove bookmark' : 'Save bookmark',
-            icon: Icon(saved ? Icons.bookmark : Icons.bookmark_border),
-            onPressed: () => bookmarks.toggle(Bookmark.fromWork(work)),
-          ),
-        ],
-      ),
-      body: ResponsiveBody(
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            Text(work.title, style: theme.textTheme.headlineSmall),
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _MetaChip(
-                  icon: Icons.calendar_today,
-                  label: work.publicationYear?.toString() ?? 'Year n/a',
-                ),
-                _MetaChip(
-                  icon: Icons.format_quote,
-                  label: '${work.citedByCount} citations',
-                ),
-                if (work.journalName != null)
-                  _MetaChip(icon: Icons.menu_book, label: work.journalName!),
-              ],
+            IconButton(
+              tooltip: 'Export citation',
+              icon: const Icon(Icons.ios_share),
+              onPressed: () => showCitationSheet(context, work),
             ),
-            const SizedBox(height: 24),
-            _Section(
-              title: 'Authors',
-              child: Text(work.authors.isEmpty ? 'Unknown' : work.authorNames),
+            IconButton(
+              tooltip: saved ? 'Remove bookmark' : 'Save bookmark',
+              icon: Icon(saved ? Icons.bookmark : Icons.bookmark_border),
+              onPressed: () => bookmarks.toggle(Bookmark.fromWork(work)),
             ),
-            if (doiUrl != null)
+          ],
+        ),
+        body: ResponsiveBody(
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              Text(work.title, style: theme.textTheme.headlineSmall),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _MetaChip(
+                    icon: Icons.calendar_today,
+                    label: work.publicationYear?.toString() ?? 'Year n/a',
+                  ),
+                  _MetaChip(
+                    icon: Icons.format_quote,
+                    label: '${work.citedByCount} citations',
+                  ),
+                  if (work.journalName != null)
+                    _MetaChip(icon: Icons.menu_book, label: work.journalName!),
+                ],
+              ),
+              const SizedBox(height: 24),
               _Section(
-                title: 'DOI',
-                child: InkWell(
-                  onTap: () => _openDoi(context, doiUrl),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.link, size: 18),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          doiUrl,
-                          style: TextStyle(
-                            color: theme.colorScheme.secondary,
-                            decoration: TextDecoration.underline,
+                title: 'Authors',
+                child: Text(
+                  work.authors.isEmpty ? 'Unknown' : work.authorNames,
+                ),
+              ),
+              if (doiUrl != null)
+                _Section(
+                  title: 'DOI',
+                  child: InkWell(
+                    onTap: () => _openDoi(context, doiUrl),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.link, size: 18),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            doiUrl,
+                            style: TextStyle(
+                              color: theme.colorScheme.secondary,
+                              decoration: TextDecoration.underline,
+                            ),
                           ),
                         ),
-                      ),
-                      const Icon(Icons.open_in_new, size: 16),
-                    ],
+                        const Icon(Icons.open_in_new, size: 16),
+                      ],
+                    ),
                   ),
                 ),
+              _Section(
+                title: 'Abstract',
+                child: Text(
+                  abstractText ?? 'No abstract available for this publication.',
+                  style: abstractText == null
+                      ? TextStyle(
+                          fontStyle: FontStyle.italic,
+                          color: theme.colorScheme.outline,
+                        )
+                      : null,
+                ),
               ),
-            _Section(
-              title: 'Abstract',
-              child: Text(
-                abstractText ?? 'No abstract available for this publication.',
-                style: abstractText == null
-                    ? TextStyle(
-                        fontStyle: FontStyle.italic,
-                        color: theme.colorScheme.outline,
-                      )
-                    : null,
+              // FR-15: citation network — lazy-loaded on expand.
+              _CitationSection(
+                work: work,
+                direction: _CitationDirection.references,
               ),
-            ),
-            // FR-15: citation network — lazy-loaded on expand.
-            _CitationSection(work: work, direction: _CitationDirection.references),
-            _CitationSection(work: work, direction: _CitationDirection.citedBy),
-          ],
+              _CitationSection(
+                work: work,
+                direction: _CitationDirection.citedBy,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -336,8 +353,10 @@ class _CitationItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bookmarks = context.watch<BookmarkProvider>();
-    final saved =
-        bookmarks.isBookmarked(BookmarkType.work, work.id ?? work.title);
+    final saved = bookmarks.isBookmarked(
+      BookmarkType.work,
+      work.id ?? work.title,
+    );
     final author = work.authors.isNotEmpty
         ? work.authors.first.displayName
         : 'Unknown';
@@ -372,9 +391,9 @@ class _CitationItem extends StatelessWidget {
           ),
         ],
       ),
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => DetailScreen(work: work)),
-      ),
+      onTap: () => Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (_) => DetailScreen(work: work))),
     );
   }
 }

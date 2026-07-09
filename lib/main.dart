@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'firebase/analytics_service.dart';
 import 'firebase/auth_service.dart';
 import 'firebase_options.dart';
 import 'screens/auth_gate.dart';
@@ -18,9 +19,7 @@ const String _googleServerClientId =
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   GoogleSignInAuthenticator.serverClientId = _googleServerClientId;
   runApp(const JournalTrendApp());
 }
@@ -35,6 +34,7 @@ class JournalTrendApp extends StatefulWidget {
     super.key,
     this.service,
     this.bookmarkService,
+    this.analytics,
     this.home,
   });
 
@@ -47,6 +47,10 @@ class JournalTrendApp extends StatefulWidget {
   /// Optional injected bookmark service (tests). When null, one is created
   /// internally (it resolves shared-preferences lazily — see [BookmarkService]).
   final BookmarkService? bookmarkService;
+
+  /// Optional injected analytics backend (tests). When null, a Firebase-backed
+  /// [AnalyticsService] is used (it resolves FirebaseAnalytics lazily).
+  final AnalyticsApi? analytics;
 
   /// Optional root screen override. Defaults to [AuthGate] in production; tests
   /// pass a Firebase-free widget (e.g. HomeShell) to skip the auth gate.
@@ -63,6 +67,8 @@ class _JournalTrendAppState extends State<JournalTrendApp> {
   late final BookmarkService _bookmarkService =
       widget.bookmarkService ?? BookmarkService();
 
+  late final AnalyticsApi _analytics = widget.analytics ?? AnalyticsService();
+
   /// Only dispose a service we created ourselves; an injected one is owned by
   /// the test that provided it.
   bool get _ownsService => widget.service == null;
@@ -78,14 +84,19 @@ class _JournalTrendAppState extends State<JournalTrendApp> {
     return MultiProvider(
       providers: [
         Provider<OpenAlexService>.value(value: _service),
+        Provider<AnalyticsApi>.value(value: _analytics),
         ChangeNotifierProvider(create: (_) => FilterProvider(_service)),
         ChangeNotifierProvider(create: (_) => SearchProvider(_service)),
         ChangeNotifierProvider(create: (_) => TrendProvider(_service)),
         ChangeNotifierProvider(create: (_) => DashboardProvider(_service)),
         ChangeNotifierProvider(create: (_) => ComparisonProvider(_service)),
-        ChangeNotifierProvider(create: (_) => BookmarkProvider(_bookmarkService)),
+        ChangeNotifierProvider(
+          create: (_) => BookmarkProvider(_bookmarkService),
+        ),
         // Lab 03 tab ViewModels (Home / Journals / Keywords).
-        ChangeNotifierProvider(create: (_) => HomeViewModel(_service)),
+        ChangeNotifierProvider(
+          create: (_) => HomeViewModel(_service, analytics: _analytics),
+        ),
         ChangeNotifierProvider(create: (_) => JournalsViewModel(_service)),
         ChangeNotifierProvider(create: (_) => KeywordsViewModel(_service)),
       ],

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../firebase/analytics_service.dart';
 import '../firebase/auth_service.dart';
 import '../firebase/app_user.dart';
 
@@ -18,11 +19,13 @@ enum AuthStatus { unknown, signedOut, signedIn }
 /// no Firebase types — it depends only on [AuthApi], so it is fully unit
 /// testable with a fake.
 class AuthViewModel extends ChangeNotifier {
-  AuthViewModel(this._auth) {
+  AuthViewModel(this._auth, {AnalyticsApi? analytics})
+    : _analytics = analytics {
     _sub = _auth.authStateChanges.listen(_onUserChanged);
   }
 
   final AuthApi _auth;
+  final AnalyticsApi? _analytics;
   late final StreamSubscription<AppUser?> _sub;
 
   AuthStatus status = AuthStatus.unknown;
@@ -41,8 +44,9 @@ class AuthViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _auth.signInWithGoogle();
+      final signedIn = await _auth.signInWithGoogle();
       // A successful sign-in flows back through authStateChanges → _onUserChanged.
+      if (signedIn != null) _analytics?.logLogin();
     } on AuthException catch (e) {
       errorMessage = e.message;
     } catch (_) {
@@ -55,6 +59,7 @@ class AuthViewModel extends ChangeNotifier {
 
   Future<void> signOut() async {
     try {
+      _analytics?.logLogout();
       await _auth.signOut();
     } on AuthException catch (e) {
       errorMessage = e.message;

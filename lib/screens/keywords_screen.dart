@@ -151,14 +151,18 @@ class KeywordDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider<KeywordDetailViewModel>(
-      create: (ctx) =>
-          KeywordDetailViewModel(ctx.read<OpenAlexService>())..load(keyword.key),
-      child: Scaffold(
-        appBar: AppBar(title: Text(keyword.keyDisplayName)),
-        body: ResponsiveBody(
-          child: Consumer<KeywordDetailViewModel>(
-            builder: (context, vm, _) => _buildBody(context, vm),
+    return LogScreenView(
+      log: (analytics) => analytics.logViewKeyword(keyword.keyDisplayName),
+      child: ChangeNotifierProvider<KeywordDetailViewModel>(
+        create: (ctx) =>
+            KeywordDetailViewModel(ctx.read<OpenAlexService>())
+              ..load(keyword.key),
+        child: Scaffold(
+          appBar: AppBar(title: Text(keyword.keyDisplayName)),
+          body: ResponsiveBody(
+            child: Consumer<KeywordDetailViewModel>(
+              builder: (context, vm, _) => _buildBody(context, vm),
+            ),
           ),
         ),
       ),

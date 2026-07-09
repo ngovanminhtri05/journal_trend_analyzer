@@ -82,14 +82,18 @@ class JournalDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider<JournalDetailViewModel>(
-      create: (ctx) =>
-          JournalDetailViewModel(ctx.read<OpenAlexService>())..load(journal.key),
-      child: Scaffold(
-        appBar: AppBar(title: Text(journal.keyDisplayName)),
-        body: ResponsiveBody(
-          child: Consumer<JournalDetailViewModel>(
-            builder: (context, vm, _) => _buildBody(context, vm),
+    return LogScreenView(
+      log: (analytics) => analytics.logViewJournal(journal.keyDisplayName),
+      child: ChangeNotifierProvider<JournalDetailViewModel>(
+        create: (ctx) =>
+            JournalDetailViewModel(ctx.read<OpenAlexService>())
+              ..load(journal.key),
+        child: Scaffold(
+          appBar: AppBar(title: Text(journal.keyDisplayName)),
+          body: ResponsiveBody(
+            child: Consumer<JournalDetailViewModel>(
+              builder: (context, vm, _) => _buildBody(context, vm),
+            ),
           ),
         ),
       ),
@@ -107,7 +111,9 @@ class JournalDetailScreen extends StatelessWidget {
           onRetry: vm.retry,
         );
       case ViewState.empty:
-        return const EmptyView(message: 'No publications found for this journal.');
+        return const EmptyView(
+          message: 'No publications found for this journal.',
+        );
       case ViewState.success:
         final theme = Theme.of(context);
         return ListView(
