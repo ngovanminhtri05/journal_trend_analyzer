@@ -107,11 +107,11 @@ Lab 03 changes the product significantly:
 | Task | 内容 | DoD | Depends | Status |
 |------|------|-----|---------|--------|
 | 10.1 | Patrol setup (patrol CLI + integration_test + android config) `[tdd:skip:config]` | `patrol test` runs a smoke test | 3.1 | cc:done (setup) / blocked (run) — deps (`patrol`, `integration_test`) + `patrol:` config; Android `PatrolJUnitRunner` + orchestrator + `MainActivityTest.java`; smoke test `integration_test/app_test.dart` (analyze-clean). `patrol test` build fails on this Windows box with `StandardFileSystem only supports file:* URIs` / `Invalid depfile` (bare lowercase `d:/` paths) — a patrol_cli 4.4.0 + Flutter 3.41 Windows toolchain bug, not app code. Run via Android Studio instrumentation or a machine without the lowercase-drive path bug. |
-| 10.2 | TC1 Google Sign-In; TC11 Logout (`authentication_test.dart`) `[tdd:required]` | Sign-in→Home; logout→Login | 10.1, 2.3 | cc:todo |
-| 10.3 | TC2 Search; TC3 Publication detail (`publication_test.dart`) `[tdd:required]` | Results shown; detail fields shown | 10.1, 5.1 | cc:todo |
-| 10.4 | TC4 Journals nav; TC5 Journal detail (`journal_test.dart`) `[tdd:required]` | Lists/stats shown; detail shown | 10.1, 6.2 | cc:todo |
-| 10.5 | TC6 Keywords nav; TC7 Keyword detail (`keyword_test.dart`) `[tdd:required]` | Lists/stats shown; analysis shown | 10.1, 7.2 | cc:todo |
-| 10.6 | TC8 Profile nav; TC9 PDF export+upload; TC10 Remote Config (`profile_test.dart`/`export_test.dart`/`remote_config_test.dart`) `[tdd:required]` | Each verifies its screen/result | 10.1, 8.3, 8.4 | cc:todo |
+| 10.2 | TC1 Google Sign-In; TC11 Logout (`authentication_test.dart`) `[tdd:required]` | Sign-in→Home; logout→Login | 10.1, 2.3 | cc:done (written) — real auth gate + native Google chooser via `signInWithGoogle` helper; analyze-clean. Run blocked by the 10.1 Windows toolchain bug. |
+| 10.3 | TC2 Search; TC3 Publication detail (`publication_test.dart`) `[tdd:required]` | Results shown; detail fields shown | 10.1, 5.1 | cc:done (written) |
+| 10.4 | TC4 Journals nav; TC5 Journal detail (`journal_test.dart`) `[tdd:required]` | Lists/stats shown; detail shown | 10.1, 6.2 | cc:done (written) |
+| 10.5 | TC6 Keywords nav; TC7 Keyword detail (`keyword_test.dart`) `[tdd:required]` | Lists/stats shown; analysis shown | 10.1, 7.2 | cc:done (written) |
+| 10.6 | TC8 Profile nav; TC9 PDF export+upload; TC10 Remote Config (`profile_test.dart`/`export_test.dart`) `[tdd:required]` | Each verifies its screen/result | 10.1, 8.3, 8.4 | cc:done (written) — TC8/TC10 use a fake signed-in shell (deterministic); TC9 uses real sign-in for the Storage upload. Run blocked by 10.1. |
 
 ## Phase 11: AI code review
 
