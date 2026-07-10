@@ -62,17 +62,17 @@ class GoogleSignInAuthenticator implements GoogleAuthenticator {
     : _signIn = signIn ?? GoogleSignIn.instance;
 
   final GoogleSignIn _signIn;
-  bool _initialized = false;
+
+  /// Cached one-shot init: concurrent callers await the same Future instead of
+  /// racing on a bool flag (which could initialize the plugin twice).
+  Future<void>? _initFuture;
 
   /// Web OAuth client id (needed on Android to receive an id token). Wired from
   /// Firebase config in the R2 setup step; safe to leave null for now.
   static String? serverClientId;
 
-  Future<void> _ensureInitialized() async {
-    if (_initialized) return;
-    await _signIn.initialize(serverClientId: serverClientId);
-    _initialized = true;
-  }
+  Future<void> _ensureInitialized() =>
+      _initFuture ??= _signIn.initialize(serverClientId: serverClientId);
 
   @override
   Future<OAuthCredential?> credential() async {

@@ -40,7 +40,7 @@ class AnalyticsService implements AnalyticsApi {
   @override
   Future<void> logSearchTopic(String keyword) => _analytics.logEvent(
     name: 'search_topic',
-    parameters: {'keyword': keyword},
+    parameters: {'keyword': _clip(keyword)},
   );
 
   @override

@@ -14,9 +14,7 @@ import '../firebase/messaging_service.dart';
 /// unit-testable with a fake [MessagingApi].
 class NotificationsViewModel extends ChangeNotifier {
   NotificationsViewModel(this._messaging, {SharedPreferences? prefs})
-    : _prefs = prefs {
-    _sub = _messaging.onMessage.listen(add);
-  }
+    : _prefs = prefs;
 
   static const String _storageKey = 'notifications_v1';
   static const int _maxStored = 50;
@@ -34,7 +32,8 @@ class NotificationsViewModel extends ChangeNotifier {
   Future<SharedPreferences> get _preferences async =>
       _prefs ??= await SharedPreferences.getInstance();
 
-  /// Loads persisted notifications and requests permission + the FCM token.
+  /// Loads persisted notifications, subscribes to incoming messages, and
+  /// requests permission + the FCM token.
   Future<void> load() async {
     final prefs = await _preferences;
     final raw = prefs.getStringList(_storageKey) ?? const [];
@@ -47,6 +46,10 @@ class NotificationsViewModel extends ChangeNotifier {
         ),
       );
     notifyListeners();
+
+    // Subscribe only after the persisted list is in place, so an incoming
+    // message can't be clobbered by the initial load.
+    _sub ??= _messaging.onMessage.listen(add);
 
     try {
       token = await _messaging.initialize();

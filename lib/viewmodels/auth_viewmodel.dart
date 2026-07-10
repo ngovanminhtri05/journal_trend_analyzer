@@ -59,8 +59,9 @@ class AuthViewModel extends ChangeNotifier {
 
   Future<void> signOut() async {
     try {
-      _analytics?.logLogout();
       await _auth.signOut();
+      // Only count a logout that actually succeeded.
+      _analytics?.logLogout();
     } on AuthException catch (e) {
       errorMessage = e.message;
       notifyListeners();

@@ -63,8 +63,9 @@ class HomeViewModel extends ChangeNotifier {
     errorMessage = null;
     notifyListeners();
 
-    // Analytics: search_topic{keyword}. Fire-and-forget; never blocks the fetch.
-    _analytics?.logSearchTopic(query);
+    // Analytics: search_topic{keyword}. Fire-and-forget; never blocks the fetch
+    // and never surfaces as an unhandled async error.
+    _analytics?.logSearchTopic(query).ignore();
 
     try {
       final results = await Future.wait([
@@ -144,7 +145,7 @@ class HomeViewModel extends ChangeNotifier {
         bytes: bytes,
         fileName: fileName,
       );
-      _analytics?.logExportPdf(lastQuery);
+      _analytics?.logExportPdf(lastQuery).ignore();
     } catch (_) {
       exportError = 'Failed to export the report. Please try again.';
     }

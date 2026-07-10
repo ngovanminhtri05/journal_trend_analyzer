@@ -13,7 +13,7 @@ double averageCitations(List<Work> works) {
 }
 
 /// The year with the highest publication count, or null when [years] is empty
-/// or none of the keys parse as a year.
+/// or the highest-count bucket's key does not parse as a year.
 int? mostActiveYear(List<GroupByItem> years) {
   if (years.isEmpty) return null;
   final top = years.reduce((a, b) => a.count >= b.count ? a : b);
