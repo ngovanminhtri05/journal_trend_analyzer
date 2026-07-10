@@ -123,7 +123,7 @@ Lab 03 changes the product significantly:
 
 | Task | 内容 | DoD | Depends | Status |
 |------|------|-----|---------|--------|
-| 12.1 | Report 5–10 pages (overview, architecture/MVVM, Firebase design, screenshots, analytics events, crashlytics, remote config, patrol results, AI review, challenges, lessons) `[tdd:skip:docs]` | Report covers all rubric sections | Phase 10, 11 | cc:todo |
+| 12.1 | Report 5–10 pages (overview, architecture/MVVM, Firebase design, screenshots, analytics events, crashlytics, remote config, patrol results, AI review, challenges, lessons) `[tdd:skip:docs]` | Report covers all rubric sections | Phase 10, 11 | cc:done (draft) — `docs/REPORT-Lab03.md` covers every rubric section with screenshot slots. Insert screenshots + fill name/StudentID + export to PDF. |
 | 12.2 | **R5** Demo video 5–10 min (all features) `[tdd:skip:docs]` | Video covers the required list | Phase 8–10 | cc:todo |
 | 12.3 | **R4** Repo finalize: rename `PRM393_Lab03_<StudentID>`, include firebase config + patrol scripts + assets `[tdd:skip:config]` | Repo matches deliverable structure | all | cc:todo |
 
