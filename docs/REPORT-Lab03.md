@@ -125,10 +125,17 @@ _[Screenshot slots: Crashlytics card; a crash/non-fatal in the console.]_
 
 ### 3.6 Storage — PDF report export
 `report_builder.dart` renders the overview (metrics table, most-influential paper,
-per-year table) to ASCII-safe PDF bytes (built-in Helvetica font). `StorageService`
-uploads to `reports/{uid}/<file>.pdf` and returns a download URL, shown in a dialog
-with a Copy link action. Owner-only access is enforced by `storage.rules`
-(`allow read, write: if request.auth.uid == uid`).
+per-year table) to ASCII-safe PDF bytes (built-in Helvetica font).
+`HomeViewModel.exportReport` **saves the PDF locally and opens the OS share sheet**
+(`share_plus` + `path_provider`) — so the feature works with no backend — and
+**best-effort uploads** to `reports/{uid}/<file>.pdf` via `StorageService`,
+showing the download URL when Storage is available. Owner-only access is enforced
+by `storage.rules` (`allow read, write: if request.auth.uid == uid`).
+
+> **Note:** Firebase now requires the **Blaze** (pay-as-you-go) plan to enable
+> Cloud Storage. On the free **Spark** plan the local-save + share path still
+> demonstrates the export end to end; the cloud upload lights up automatically
+> once Storage is enabled.
 
 _[Screenshot slots: Export button; "Report uploaded" dialog; the file in Storage.]_
 

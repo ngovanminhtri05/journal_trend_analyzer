@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../viewmodels/viewmodels.dart';
 import '../widgets/widgets.dart';
@@ -155,14 +156,33 @@ class _Overview extends StatelessWidget {
   }
 }
 
-/// Builds + uploads the dashboard PDF, then shows the download URL (or an
-/// error). The signed-in uid (from the auth gate) scopes the Storage path.
+/// Builds the dashboard PDF, opens the OS share sheet for the saved file, and —
+/// when the cloud upload succeeded — shows the Storage download URL too. The
+/// signed-in uid (from the auth gate) scopes the Storage path.
 Future<void> _exportReport(BuildContext context, HomeViewModel vm) async {
   final uid = context.read<AuthViewModel?>()?.user?.uid ?? 'anonymous';
   final messenger = ScaffoldMessenger.of(context);
   await vm.exportReport(uid: uid);
   if (!context.mounted) return;
 
+  if (vm.exportError != null) {
+    messenger.showSnackBar(SnackBar(content: Text(vm.exportError!)));
+    return;
+  }
+
+  // Share the locally-saved PDF (works with no backend / no billing).
+  final path = vm.reportFilePath;
+  if (path != null) {
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [XFile(path)],
+        text: 'Journal Trend Analyzer report — ${vm.lastQuery}',
+      ),
+    );
+  }
+  if (!context.mounted) return;
+
+  // If Storage was enabled, also surface the download URL.
   final url = vm.reportUrl;
   if (url != null) {
     await showDialog<void>(
@@ -173,7 +193,7 @@ Future<void> _exportReport(BuildContext context, HomeViewModel vm) async {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Your PDF report is stored in Firebase Storage:'),
+            const Text('Your PDF report is also stored in Firebase Storage:'),
             const SizedBox(height: 8),
             SelectableText(url, style: Theme.of(ctx).textTheme.bodySmall),
           ],
@@ -193,8 +213,6 @@ Future<void> _exportReport(BuildContext context, HomeViewModel vm) async {
         ],
       ),
     );
-  } else if (vm.exportError != null) {
-    messenger.showSnackBar(SnackBar(content: Text(vm.exportError!)));
   }
 }
 

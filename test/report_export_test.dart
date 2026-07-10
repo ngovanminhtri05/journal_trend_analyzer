@@ -89,21 +89,28 @@ void main() {
   });
 
   group('HomeViewModel.exportReport', () {
-    test('uploads the report and exposes the URL + logs export_pdf', () async {
+    // Fake saver so tests never touch path_provider; returns a deterministic path.
+    Future<String> fakeSaver(Uint8List bytes, String fileName) async =>
+        '/tmp/$fileName';
+
+    test('saves locally, uploads, exposes URL + logs export_pdf', () async {
       final storage = _FakeStorage();
       final analytics = _RecordingAnalytics();
-      final vm = HomeViewModel(
-        _unusedService(),
-        analytics: analytics,
-        storage: storage,
-      )
-        ..lastQuery = 'quantum'
-        ..summary = _summary;
+      final vm =
+          HomeViewModel(
+              _unusedService(),
+              analytics: analytics,
+              storage: storage,
+              saveReport: fakeSaver,
+            )
+            ..lastQuery = 'quantum'
+            ..summary = _summary;
 
       await vm.exportReport(uid: 'user-1');
 
       expect(vm.isExporting, isFalse);
       expect(vm.exportError, isNull);
+      expect(vm.reportFilePath, startsWith('/tmp/report_quantum_'));
       expect(vm.reportUrl, contains('reports/user-1/'));
       expect(storage.uploadedUid, 'user-1');
       expect(storage.uploadedBytes, greaterThan(0));
@@ -113,24 +120,66 @@ void main() {
 
     test('is a no-op when there is no summary', () async {
       final storage = _FakeStorage();
-      final vm = HomeViewModel(_unusedService(), storage: storage);
+      final vm = HomeViewModel(
+        _unusedService(),
+        storage: storage,
+        saveReport: fakeSaver,
+      );
 
       await vm.exportReport(uid: 'user-1');
 
+      expect(vm.reportFilePath, isNull);
       expect(vm.reportUrl, isNull);
       expect(storage.uploadedUid, isNull);
     });
 
-    test('surfaces an error message when the upload fails', () async {
-      final storage = _FakeStorage()..error = Exception('network down');
-      final vm = HomeViewModel(_unusedService(), storage: storage)
-        ..lastQuery = 'quantum'
-        ..summary = _summary;
+    test('still saves locally (no error) when the upload fails', () async {
+      // Storage disabled / offline: cloud upload throws, local export succeeds.
+      final storage = _FakeStorage()..error = Exception('storage not enabled');
+      final analytics = _RecordingAnalytics();
+      final vm =
+          HomeViewModel(
+              _unusedService(),
+              analytics: analytics,
+              storage: storage,
+              saveReport: fakeSaver,
+            )
+            ..lastQuery = 'quantum'
+            ..summary = _summary;
 
       await vm.exportReport(uid: 'user-1');
 
+      expect(vm.exportError, isNull);
+      expect(vm.reportFilePath, startsWith('/tmp/report_quantum_'));
       expect(vm.reportUrl, isNull);
+      expect(analytics.exportPdfTopics, ['quantum']);
+    });
+
+    test('exports locally with no Storage configured at all', () async {
+      final vm = HomeViewModel(_unusedService(), saveReport: fakeSaver)
+        ..lastQuery = 'quantum'
+        ..summary = _summary;
+
+      await vm.exportReport(uid: 'anonymous');
+
+      expect(vm.reportFilePath, isNotNull);
+      expect(vm.reportUrl, isNull);
+      expect(vm.exportError, isNull);
+    });
+
+    test('surfaces an error when the PDF cannot be saved', () async {
+      final vm =
+          HomeViewModel(
+              _unusedService(),
+              saveReport: (bytes, name) async => throw Exception('disk full'),
+            )
+            ..lastQuery = 'quantum'
+            ..summary = _summary;
+
+      await vm.exportReport(uid: 'user-1');
+
       expect(vm.exportError, isNotNull);
+      expect(vm.reportFilePath, isNull);
       expect(vm.isExporting, isFalse);
     });
   });

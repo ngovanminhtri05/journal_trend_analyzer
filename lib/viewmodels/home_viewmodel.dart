@@ -5,6 +5,7 @@ import '../firebase/storage_service.dart';
 import '../models/models.dart';
 import '../services/openalex_service.dart';
 import '../services/report_builder.dart';
+import '../services/report_file_saver.dart';
 import '../services/trend_classifier.dart';
 import '../utils/utils.dart';
 import 'dashboard_provider.dart' show DashboardSummary;
@@ -21,27 +22,32 @@ class HomeViewModel extends ChangeNotifier {
     this._service, {
     AnalyticsApi? analytics,
     ReportStorageApi? storage,
+    ReportFileSaver? saveReport,
   }) : _analytics = analytics,
-       _storage = storage;
+       _storage = storage,
+       _saveReport = saveReport ?? saveReportToTemp;
 
   final OpenAlexService _service;
   final AnalyticsApi? _analytics;
   final ReportStorageApi? _storage;
+  final ReportFileSaver _saveReport;
 
   ViewState state = ViewState.idle;
   String? errorMessage;
   String lastQuery = '';
 
-  /// PDF-report export state (task 8.3). [reportUrl] holds the Storage download
-  /// URL after a successful upload; [exportError] a user-facing failure message.
+  /// PDF-report export state (task 8.3). [reportFilePath] is the locally-saved
+  /// PDF (always produced, no backend needed); [reportUrl] is the Storage
+  /// download URL when the best-effort cloud upload succeeds (needs Storage
+  /// enabled); [exportError] is a user-facing failure message.
   bool isExporting = false;
+  String? reportFilePath;
   String? reportUrl;
   String? exportError;
 
-  /// Whether a report can be exported right now (a successful overview loaded,
-  /// storage available, and no export already running).
-  bool get canExport =>
-      state == ViewState.success && summary != null && _storage != null;
+  /// Whether a report can be exported right now (a successful overview loaded
+  /// and no export already running). Local export needs no Storage.
+  bool get canExport => state == ViewState.success && summary != null;
 
   /// The six aggregate insights (total / avg citations / most-active year /
   /// top journal / top author / most-influential paper).
@@ -110,17 +116,18 @@ class HomeViewModel extends ChangeNotifier {
 
   Future<void> retry() => search(lastQuery);
 
-  /// Builds the dashboard PDF for the current overview, uploads it to Firebase
-  /// Storage under [uid], and exposes the download URL (task 8.3). Fires the
-  /// `export_pdf` analytics event on success.
+  /// Builds the dashboard PDF for the current overview, saves it locally (so it
+  /// can be shared with no backend), and best-effort uploads it to Firebase
+  /// Storage under [uid] (populating [reportUrl] when Storage is available).
+  /// Fires the `export_pdf` analytics event. Task 8.3.
   Future<void> exportReport({required String uid}) async {
     final s = summary;
-    final storage = _storage;
-    if (s == null || storage == null || isExporting) return;
+    if (s == null || isExporting) return;
 
     isExporting = true;
     exportError = null;
     reportUrl = null;
+    reportFilePath = null;
     notifyListeners();
 
     try {
@@ -140,11 +147,25 @@ class HomeViewModel extends ChangeNotifier {
           : lastQuery.replaceAll(RegExp(r'[^A-Za-z0-9]+'), '_');
       final fileName =
           'report_${slug}_${DateTime.now().millisecondsSinceEpoch}.pdf';
-      reportUrl = await storage.uploadReport(
-        uid: uid,
-        bytes: bytes,
-        fileName: fileName,
-      );
+
+      // Primary path: save locally for the OS share sheet (no billing needed).
+      reportFilePath = await _saveReport(bytes, fileName);
+
+      // Bonus path: upload to Storage if it's configured/enabled. Failures here
+      // (e.g. Storage not provisioned) never fail the export.
+      final storage = _storage;
+      if (storage != null) {
+        try {
+          reportUrl = await storage.uploadReport(
+            uid: uid,
+            bytes: bytes,
+            fileName: fileName,
+          );
+        } catch (_) {
+          reportUrl = null;
+        }
+      }
+
       _analytics?.logExportPdf(lastQuery).ignore();
     } catch (_) {
       exportError = 'Failed to export the report. Please try again.';

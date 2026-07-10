@@ -10,5 +10,6 @@ export 'citation_formatter.dart';
 export 'openalex_exceptions.dart';
 export 'openalex_service.dart';
 export 'report_builder.dart';
+export 'report_file_saver.dart';
 export 'research_gap.dart';
 export 'trend_classifier.dart';
