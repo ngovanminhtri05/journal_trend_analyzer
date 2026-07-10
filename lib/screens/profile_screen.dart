@@ -5,6 +5,8 @@ import '../firebase/crash_reporter_service.dart';
 import '../firebase/remote_config_service.dart';
 import '../theme/app_theme.dart';
 import '../viewmodels/auth_viewmodel.dart';
+import '../viewmodels/notifications_viewmodel.dart';
+import 'notifications_screen.dart';
 
 /// Profile tab (Lab 03, task 8.1).
 ///
@@ -79,6 +81,8 @@ class ProfileScreen extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 24),
+        const _NotificationsTile(),
+        const SizedBox(height: 16),
         const _RemoteConfigCard(),
         const SizedBox(height: 16),
         const _CrashlyticsCard(),
@@ -124,6 +128,29 @@ class _RemoteConfigCard extends StatelessWidget {
             trailing: Text('${config.maxKeywords}'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Notification Center entry (task 8.2): opens the received-notifications list.
+class _NotificationsTile extends StatelessWidget {
+  const _NotificationsTile();
+
+  @override
+  Widget build(BuildContext context) {
+    final notifications = context.watch<NotificationsViewModel?>();
+    if (notifications == null) return const SizedBox.shrink();
+    final count = notifications.notifications.length;
+    return Card(
+      child: ListTile(
+        leading: const Icon(Icons.notifications_outlined),
+        title: const Text('Notifications'),
+        subtitle: Text(count == 0 ? 'No notifications yet' : '$count received'),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const NotificationsScreen())),
       ),
     );
   }

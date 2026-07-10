@@ -2,12 +2,14 @@ import 'dart:ui';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'firebase/analytics_service.dart';
 import 'firebase/auth_service.dart';
 import 'firebase/crash_reporter_service.dart';
+import 'firebase/messaging_service.dart';
 import 'firebase/remote_config_service.dart';
 import 'firebase/storage_service.dart';
 import 'firebase_options.dart';
@@ -23,10 +25,20 @@ import 'theme/app_theme.dart';
 const String _googleServerClientId =
     '61025513530-0a5q3gqj4gfp7rc0iv2cdh2f1m55r8c8.apps.googleusercontent.com';
 
+/// Background FCM handler (task 9.3). Runs in its own isolate, so Firebase must
+/// be initialised here before touching any plugin. Must be a top-level function.
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   GoogleSignInAuthenticator.serverClientId = _googleServerClientId;
+
+  // FCM (task 9.3): register the background message handler before runApp.
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
   // Crashlytics (task 9.2): route uncaught Flutter + platform errors to
   // Crashlytics so they are reported to the console.
@@ -58,6 +70,7 @@ class JournalTrendApp extends StatefulWidget {
     this.remoteConfig,
     this.crashReporter,
     this.storage,
+    this.messaging,
     this.home,
   });
 
@@ -87,6 +100,10 @@ class JournalTrendApp extends StatefulWidget {
   /// [StorageService] is used (it resolves FirebaseStorage lazily).
   final ReportStorageApi? storage;
 
+  /// Optional injected messaging backend (tests). When null, a Firebase-backed
+  /// [MessagingService] is used (it resolves FirebaseMessaging lazily).
+  final MessagingApi? messaging;
+
   /// Optional root screen override. Defaults to [AuthGate] in production; tests
   /// pass a Firebase-free widget (e.g. HomeShell) to skip the auth gate.
   final Widget? home;
@@ -111,6 +128,8 @@ class _JournalTrendAppState extends State<JournalTrendApp> {
       widget.crashReporter ?? CrashlyticsService();
 
   late final ReportStorageApi _storage = widget.storage ?? StorageService();
+
+  late final MessagingApi _messaging = widget.messaging ?? MessagingService();
 
   /// Only dispose a service we created ourselves; an injected one is owned by
   /// the test that provided it.
@@ -145,6 +164,9 @@ class _JournalTrendAppState extends State<JournalTrendApp> {
         ),
         ChangeNotifierProvider(create: (_) => JournalsViewModel(_service)),
         ChangeNotifierProvider(create: (_) => KeywordsViewModel(_service)),
+        ChangeNotifierProvider(
+          create: (_) => NotificationsViewModel(_messaging)..load(),
+        ),
       ],
       child: MaterialApp(
         title: 'Journal Trend Analyzer',
