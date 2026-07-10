@@ -31,10 +31,10 @@ Lab 03 changes the product significantly:
 
 | Task | 内容 | DoD | Depends | Status |
 |------|------|-----|---------|--------|
-| 0.1 | Create Lab 03 working copy (new repo `PRM393_Lab03_<StudentID>` or branch off Lab 02 code) `[tdd:skip:config]` | Repo/branch builds the Lab 02 app as baseline | - | cc:todo |
-| 0.2 | **R1** Firebase project + `flutterfire configure` (firebase_core, firebase_options.dart, google-services.json) `[tdd:skip:config]` | `Firebase.initializeApp` succeeds on Android | 0.1 | cc:todo |
-| 0.3 | Add deps: firebase_auth, google_sign_in, firebase_storage, firebase_messaging, firebase_analytics, firebase_crashlytics, firebase_remote_config, pdf, printing, path_provider; dev: patrol, integration_test `[tdd:skip:config]` | `flutter pub get` ok; `flutter analyze` clean | 0.2 | cc:todo |
-| 0.4 | **R2** Android Gradle: google-services plugin, minSdk≥23, NDK if needed, SHA-1 added in Firebase `[tdd:skip:config]` | Debug build runs with Firebase | 0.2 | cc:todo |
+| 0.1 | Create Lab 03 working copy (new repo `PRM393_Lab03_<StudentID>` or branch off Lab 02 code) `[tdd:skip:config]` | Repo/branch builds the Lab 02 app as baseline | - | cc:done — working on branch `feat/lab03-firebase`; final repo rename tracked in 12.3. |
+| 0.2 | **R1** Firebase project + `flutterfire configure` (firebase_core, firebase_options.dart, google-services.json) `[tdd:skip:config]` | `Firebase.initializeApp` succeeds on Android | 0.1 | cc:done — project `journal-analyzer-3c319`; init verified on device. |
+| 0.3 | Add deps: firebase_auth, google_sign_in, firebase_storage, firebase_messaging, firebase_analytics, firebase_crashlytics, firebase_remote_config, pdf, printing, path_provider; dev: patrol, integration_test `[tdd:skip:config]` | `flutter pub get` ok; `flutter analyze` clean | 0.2 | cc:done — all Firebase deps + pdf + patrol/integration_test added; analyze clean. |
+| 0.4 | **R2** Android Gradle: google-services plugin, minSdk≥23, NDK if needed, SHA-1 added in Firebase `[tdd:skip:config]` | Debug build runs with Firebase | 0.2 | cc:done — google-services + crashlytics plugins; minSdk 23; SHA-1 added; debug APK builds. |
 
 ## Phase 1: MVVM refactor
 
