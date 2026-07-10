@@ -117,7 +117,7 @@ Lab 03 changes the product significantly:
 
 | Task | 内容 | DoD | Depends | Status |
 |------|------|-----|---------|--------|
-| 11.1 | CodeRabbit review on PR → fix ≥3 findings → document with screenshots `[tdd:skip:review]` | ≥3 findings addressed; evidence captured | Phase 2–9 | cc:todo |
+| 11.1 | CodeRabbit review on PR → fix ≥3 findings → document with screenshots `[tdd:skip:review]` | ≥3 findings addressed; evidence captured | Phase 2–9 | cc:done — PR #3 reviewed by CodeRabbit (15 findings). Fixed 6 correctness/stability items + added `storage.rules` (commit 29ec3c4); resolution summary posted as a PR comment. Capture screenshots of the PR review for the report. |
 
 ## Phase 12: Deliverables
 
