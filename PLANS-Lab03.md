@@ -106,7 +106,7 @@ Lab 03 changes the product significantly:
 
 | Task | 内容 | DoD | Depends | Status |
 |------|------|-----|---------|--------|
-| 10.1 | Patrol setup (patrol CLI + integration_test + android config) `[tdd:skip:config]` | `patrol test` runs a smoke test | 3.1 | cc:todo |
+| 10.1 | Patrol setup (patrol CLI + integration_test + android config) `[tdd:skip:config]` | `patrol test` runs a smoke test | 3.1 | cc:done (setup) / blocked (run) — deps (`patrol`, `integration_test`) + `patrol:` config; Android `PatrolJUnitRunner` + orchestrator + `MainActivityTest.java`; smoke test `integration_test/app_test.dart` (analyze-clean). `patrol test` build fails on this Windows box with `StandardFileSystem only supports file:* URIs` / `Invalid depfile` (bare lowercase `d:/` paths) — a patrol_cli 4.4.0 + Flutter 3.41 Windows toolchain bug, not app code. Run via Android Studio instrumentation or a machine without the lowercase-drive path bug. |
 | 10.2 | TC1 Google Sign-In; TC11 Logout (`authentication_test.dart`) `[tdd:required]` | Sign-in→Home; logout→Login | 10.1, 2.3 | cc:todo |
 | 10.3 | TC2 Search; TC3 Publication detail (`publication_test.dart`) `[tdd:required]` | Results shown; detail fields shown | 10.1, 5.1 | cc:todo |
 | 10.4 | TC4 Journals nav; TC5 Journal detail (`journal_test.dart`) `[tdd:required]` | Lists/stats shown; detail shown | 10.1, 6.2 | cc:todo |
