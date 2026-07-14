@@ -23,10 +23,7 @@ class DefaultFirebaseOptions {
       case TargetPlatform.android:
         return android;
       case TargetPlatform.iOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for ios - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return ios;
       case TargetPlatform.macOS:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for macos - '
@@ -72,5 +69,16 @@ class DefaultFirebaseOptions {
     authDomain: 'journal-analyzer-3c319.firebaseapp.com',
     storageBucket: 'journal-analyzer-3c319.firebasestorage.app',
     measurementId: 'G-J688J9L27P',
+  );
+
+  static const FirebaseOptions ios = FirebaseOptions(
+    apiKey: 'AIzaSyDOhwx6PO9PeeYQY8jniUqxQS75xh-SxEk',
+    appId: '1:61025513530:ios:953030cfb9b368aa9a0503',
+    messagingSenderId: '61025513530',
+    projectId: 'journal-analyzer-3c319',
+    storageBucket: 'journal-analyzer-3c319.firebasestorage.app',
+    androidClientId: '61025513530-m9dibdr9cas8tjsn6h1v5v0hik18783e.apps.googleusercontent.com',
+    iosClientId: '61025513530-j6646vtk1u2s7trncucg5lkeimboccpe.apps.googleusercontent.com',
+    iosBundleId: 'com.prm393.journalTrendAnalyzer',
   );
 }
