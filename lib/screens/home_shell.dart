@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../viewmodels/viewmodels.dart';
 import '../widgets/widgets.dart';
 import 'follow_updates.dart';
 import 'home_screen.dart';
@@ -27,10 +29,25 @@ class _HomeShellState extends State<HomeShell> {
   void initState() {
     super.initState();
     // Plan A: on open, check followed authors/journals for new papers and push
-    // any alerts to the Notification Center. Fire-and-forget; never blocks the UI.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    // any alerts to the Notification Center. Wait until bookmarks have loaded so
+    // the follow list isn't read empty. Fire-and-forget; never blocks the UI.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scheduleFollowCheck());
+  }
+
+  void _scheduleFollowCheck() {
+    if (!mounted) return;
+    final bookmarks = context.read<BookmarkProvider>();
+    if (bookmarks.ready) {
+      checkFollowUpdates(context);
+      return;
+    }
+    void onReady() {
+      if (!bookmarks.ready) return;
+      bookmarks.removeListener(onReady);
       if (mounted) checkFollowUpdates(context);
-    });
+    }
+
+    bookmarks.addListener(onReady);
   }
 
   static const _tabs = <_TabConfig>[
