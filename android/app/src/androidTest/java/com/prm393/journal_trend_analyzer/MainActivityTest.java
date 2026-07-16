@@ -2,16 +2,18 @@ package com.prm393.journal_trend_analyzer;
 
 import androidx.test.platform.app.InstrumentationRegistry;
 
+import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
 import pl.leancode.patrol.PatrolJUnitRunner;
 
 // Patrol JUnit entry point (Lab 03 Phase 10). Discovers the Dart integration
 // tests and runs each as a parameterized native test.
-@RunWith(PatrolJUnitRunner.class)
+@RunWith(Parameterized.class)
 public class MainActivityTest {
-    @Parameterized.Parameters(name = "{0}")
+    @Parameters(name = "{0}")
     public static Object[] testCases() {
         PatrolJUnitRunner instrumentation =
                 (PatrolJUnitRunner) InstrumentationRegistry.getInstrumentation();
@@ -26,7 +28,7 @@ public class MainActivityTest {
 
     private final String dartTestName;
 
-    @org.junit.Test
+    @Test
     public void runDartTest() {
         PatrolJUnitRunner instrumentation =
                 (PatrolJUnitRunner) InstrumentationRegistry.getInstrumentation();
