@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../widgets/widgets.dart';
+import 'follow_updates.dart';
 import 'home_screen.dart';
 import 'journals_screen.dart';
 import 'keywords_screen.dart';
@@ -21,6 +22,16 @@ class HomeShell extends StatefulWidget {
 
 class _HomeShellState extends State<HomeShell> {
   int _index = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // Plan A: on open, check followed authors/journals for new papers and push
+    // any alerts to the Notification Center. Fire-and-forget; never blocks the UI.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) checkFollowUpdates(context);
+    });
+  }
 
   static const _tabs = <_TabConfig>[
     _TabConfig('Home', Icons.home_outlined, HomeScreen()),

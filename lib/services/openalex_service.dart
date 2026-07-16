@@ -248,6 +248,26 @@ class OpenAlexService {
     return _parseWorks(json);
   }
 
+  /// Most recent works for a followed author or journal (new-paper alerts).
+  /// [filterField] is e.g. `authorships.author.id` or
+  /// `primary_location.source.id`; [entityId] a short or full OpenAlex id.
+  Future<List<Work>> recentWorksByEntity(
+    String filterField,
+    String entityId, {
+    int perPage = 5,
+  }) async {
+    final id = shortOpenAlexId(entityId);
+    if (id.isEmpty) return const [];
+    final json = await _getJson(
+      _apiUri(_worksPath, {
+        'filter': '$filterField:$id',
+        'sort': 'publication_date:desc',
+        'per-page': '$perPage',
+      }),
+    );
+    return _parseWorks(json);
+  }
+
   Future<List<GroupByItem>> _groupBy(
     String keyword,
     String dimension,

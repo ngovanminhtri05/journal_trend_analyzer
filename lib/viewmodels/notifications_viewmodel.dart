@@ -95,6 +95,13 @@ class NotificationsViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Shows a locally-generated notification (e.g. a follow "new paper" alert):
+  /// banner + added to the Notification Center list.
+  Future<void> pushLocal(AppNotification notification) async {
+    await _notifier?.show(notification);
+    add(notification);
+  }
+
   Future<void> clear() async {
     _items.clear();
     await _persist();

@@ -6,12 +6,25 @@ import '../firebase/messaging_service.dart';
 import '../theme/app_theme.dart';
 import '../viewmodels/notifications_viewmodel.dart';
 import '../widgets/widgets.dart';
+import 'follow_updates.dart';
 
 /// Notification Center (Lab 03 task 8.2): lists received FCM messages and shows
 /// the device token so a test push can be targeted. Pure View over
 /// [NotificationsViewModel].
 class NotificationsScreen extends StatelessWidget {
   const NotificationsScreen({super.key});
+
+  Future<void> _checkFollows(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final result = await checkFollowUpdates(context);
+    if (!context.mounted) return;
+    final text = result.follows == 0
+        ? 'No followed authors or journals yet. Bookmark some to get alerts.'
+        : result.alerts == 0
+        ? 'No new papers from your ${result.follows} follow(s).'
+        : '${result.alerts} new paper alert(s) from your follows.';
+    messenger.showSnackBar(SnackBar(content: Text(text)));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,6 +35,11 @@ class NotificationsScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Notifications'),
         actions: [
+          IconButton(
+            tooltip: 'Check followed authors/journals for new papers',
+            icon: const Icon(Icons.refresh),
+            onPressed: () => _checkFollows(context),
+          ),
           if (items.isNotEmpty)
             IconButton(
               tooltip: 'Clear all',
