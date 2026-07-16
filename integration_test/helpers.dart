@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:journal_trend_analyzer/firebase/app_user.dart';
 import 'package:journal_trend_analyzer/firebase/auth_service.dart';
+import 'package:journal_trend_analyzer/firebase/remote_config_service.dart';
 import 'package:journal_trend_analyzer/firebase_options.dart';
 import 'package:journal_trend_analyzer/main.dart';
 import 'package:journal_trend_analyzer/screens/home_shell.dart';
@@ -36,10 +37,18 @@ Future<void> pumpShell(PatrolIntegrationTester $) async {
 
 /// Boots the shell with a fake signed-in session above it, so the Profile tab
 /// shows the account + Firebase demo cards without the native Google flow.
-Future<void> pumpSignedInShell(PatrolIntegrationTester $) async {
+///
+/// [remoteConfig] lets a test inject deterministic, non-default tunables (see
+/// [StaticRemoteConfig]) instead of the uninitialised [RemoteConfigService]'s
+/// in-code defaults, so the Remote Config wiring itself gets exercised.
+Future<void> pumpSignedInShell(
+  PatrolIntegrationTester $, {
+  RemoteConfigApi? remoteConfig,
+}) async {
   await _initFirebase();
   await $.pumpWidgetAndSettle(
     JournalTrendApp(
+      remoteConfig: remoteConfig,
       home: ChangeNotifierProvider<AuthViewModel>(
         create: (_) => AuthViewModel(_FakeSignedInAuth()),
         child: const HomeShell(),
