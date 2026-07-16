@@ -47,6 +47,10 @@ abstract interface class MessagingApi {
   /// Foreground push messages, mapped to [AppNotification].
   Stream<AppNotification> get onMessage;
 
+  /// Fired when the user taps a notification that opens the app from the
+  /// background.
+  Stream<AppNotification> get onMessageOpenedApp;
+
   /// The message (if any) that launched the app from a terminated state by the
   /// user tapping a notification.
   Future<AppNotification?> initialMessage();
@@ -69,6 +73,10 @@ class MessagingService implements MessagingApi {
   @override
   Stream<AppNotification> get onMessage =>
       FirebaseMessaging.onMessage.map(AppNotification.fromRemote);
+
+  @override
+  Stream<AppNotification> get onMessageOpenedApp =>
+      FirebaseMessaging.onMessageOpenedApp.map(AppNotification.fromRemote);
 
   @override
   Future<AppNotification?> initialMessage() async {

@@ -8,13 +8,18 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// In-memory [MessagingApi] with a controllable foreground stream.
 class _FakeMessaging implements MessagingApi {
   final _controller = StreamController<AppNotification>.broadcast();
+  final _openedController = StreamController<AppNotification>.broadcast();
   String? tokenToReturn = 'fake-token';
   Object? initError;
 
   void emit(AppNotification n) => _controller.add(n);
+  void emitOpened(AppNotification n) => _openedController.add(n);
 
   @override
   Stream<AppNotification> get onMessage => _controller.stream;
+
+  @override
+  Stream<AppNotification> get onMessageOpenedApp => _openedController.stream;
 
   @override
   Future<String?> initialize() async {
@@ -25,32 +30,42 @@ class _FakeMessaging implements MessagingApi {
   @override
   Future<AppNotification?> initialMessage() async => null;
 
-  void dispose() => _controller.close();
+  void dispose() {
+    _controller.close();
+    _openedController.close();
+  }
 }
 
-AppNotification _n(String title) =>
-    AppNotification(title: title, body: 'body', receivedAt: DateTime(2026, 7, 9));
+// Distinct timestamps so the head-dedupe in the ViewModel does not merge them.
+AppNotification _n(String title) => AppNotification(
+  title: title,
+  body: 'body',
+  receivedAt: DateTime(2026, 7, 9, 0, title.hashCode.abs() % 60),
+);
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
-  test('collects a foreground message and exposes the token after load', () async {
-    final messaging = _FakeMessaging();
-    final vm = NotificationsViewModel(messaging);
-    addTearDown(() {
-      vm.dispose();
-      messaging.dispose();
-    });
+  test(
+    'collects a foreground message and exposes the token after load',
+    () async {
+      final messaging = _FakeMessaging();
+      final vm = NotificationsViewModel(messaging);
+      addTearDown(() {
+        vm.dispose();
+        messaging.dispose();
+      });
 
-    await vm.load();
-    expect(vm.token, 'fake-token');
+      await vm.load();
+      expect(vm.token, 'fake-token');
 
-    messaging.emit(_n('Hello'));
-    await Future<void>.delayed(Duration.zero);
+      messaging.emit(_n('Hello'));
+      await Future<void>.delayed(Duration.zero);
 
-    expect(vm.notifications, hasLength(1));
-    expect(vm.notifications.first.title, 'Hello');
-  });
+      expect(vm.notifications, hasLength(1));
+      expect(vm.notifications.first.title, 'Hello');
+    },
+  );
 
   test('newest notification is first and clear empties the list', () async {
     final messaging = _FakeMessaging();

@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import 'firebase/analytics_service.dart';
 import 'firebase/auth_service.dart';
 import 'firebase/crash_reporter_service.dart';
+import 'firebase/local_notifier.dart';
 import 'firebase/messaging_service.dart';
 import 'firebase/remote_config_service.dart';
 import 'firebase/storage_service.dart';
@@ -30,6 +31,11 @@ const String _googleServerClientId =
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  // Persist so the message shows up in the in-app Notification Center after the
+  // app is reopened (the OS already shows the tray banner).
+  await NotificationsViewModel.persistIncoming(
+    AppNotification.fromRemote(message),
+  );
 }
 
 Future<void> main() async {
@@ -131,6 +137,8 @@ class _JournalTrendAppState extends State<JournalTrendApp> {
 
   late final MessagingApi _messaging = widget.messaging ?? MessagingService();
 
+  late final LocalNotifierApi _localNotifier = LocalNotifier();
+
   /// Only dispose a service we created ourselves; an injected one is owned by
   /// the test that provided it.
   bool get _ownsService => widget.service == null;
@@ -165,7 +173,9 @@ class _JournalTrendAppState extends State<JournalTrendApp> {
         ChangeNotifierProvider(create: (_) => JournalsViewModel(_service)),
         ChangeNotifierProvider(create: (_) => KeywordsViewModel(_service)),
         ChangeNotifierProvider(
-          create: (_) => NotificationsViewModel(_messaging)..load(),
+          create: (_) =>
+              NotificationsViewModel(_messaging, notifier: _localNotifier)
+                ..load(),
         ),
       ],
       child: MaterialApp(
