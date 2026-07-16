@@ -1,30 +1,34 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
+import 'package:http/testing.dart';
+import 'package:http/http.dart' as http;
 import 'package:journal_trend_analyzer/main.dart';
+import 'package:journal_trend_analyzer/screens/home_shell.dart';
+import 'package:journal_trend_analyzer/services/openalex_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('App boots and shows its title', (tester) async {
+    // The app reads bookmarks from shared_preferences at boot.
+    SharedPreferences.setMockInitialValues(<String, Object>{});
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // Inject a never-called client so the boot test makes no real network calls.
+    final service = OpenAlexService(
+      client: MockClient((_) async => http.Response('{}', 200)),
+      mailto: 't@e.com',
+    );
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    // Bypass the Firebase AuthGate (no Firebase in unit tests) and pump the
+    // navigation shell directly — this test covers the tab shell, not auth.
+    await tester.pumpWidget(
+      JournalTrendApp(service: service, home: const HomeShell()),
+    );
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // The Lab 03 navigation shell renders its four tabs.
+    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.text('Home'), findsWidgets);
+    expect(find.text('Journals'), findsWidgets);
+    expect(find.text('Keywords'), findsWidgets);
+    expect(find.text('Profile'), findsWidgets);
   });
 }

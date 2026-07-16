@@ -46,3 +46,10 @@ app.*.map.json
 
 # Claude Code local state
 .claude/
+
+# Distributables / build artifacts
+dist/
+*.apk
+
+# Patrol generated test bundle
+patrol_test/
