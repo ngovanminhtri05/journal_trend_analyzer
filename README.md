@@ -6,20 +6,25 @@ from the client** — there is **no backend and no cloud**.
 
 ## Architecture
 
-A small, layered, Provider-based architecture:
+A layered **MVVM** architecture (Model · View · ViewModel) on top of the
+**`provider`** package. Views (screens/widgets) hold no business logic — they
+only bind to a ViewModel and render its `ViewState`; all fetching, mapping, and
+state transitions live in the ViewModel layer.
 
 | Layer | Folder | Responsibility |
 |-------|--------|----------------|
 | Models | `lib/models/` | Immutable OpenAlex models with manual `fromJson`. |
 | Services | `lib/services/` | `OpenAlexService` (HTTP + JSON), typed errors, abstract decoder, `BookmarkService`, pure `trend_classifier`. |
-| State | `lib/state/` | `ChangeNotifier` providers + a shared `ViewState { idle, loading, success, empty, error }`. |
-| Screens | `lib/screens/` | One screen per tab + the detail screen. |
+| ViewModels | `lib/viewmodels/` | `ChangeNotifier` ViewModels (search/trend/dashboard/comparison/filter/bookmark) + a shared `ViewState { idle, loading, success, empty, error }`. |
+| Firebase | `lib/firebase/` | Thin wrappers around the Firebase SDKs (Auth/Analytics/Crashlytics/Storage/Messaging/Remote Config). ViewModels depend on these wrappers, never on the SDKs directly. |
+| Screens (Views) | `lib/screens/` | One screen per tab + the detail screen; bind to ViewModels only. |
 | Widgets | `lib/widgets/` | Reusable UI (cards, charts, badges, filter panel). |
+| Utils | `lib/utils/` | Pure, framework-free helpers shared across layers. |
 | Theme | `lib/theme/` | App theme. |
 
 State management uses the **`provider`** package: a single `OpenAlexService` and
 one `BookmarkService` are created at the root and injected into the
-`ChangeNotifier` providers. Charts use **`fl_chart`**; offline storage uses
+`ChangeNotifier` ViewModels. Charts use **`fl_chart`**; offline storage uses
 **`shared_preferences`**.
 
 ### Data is always live

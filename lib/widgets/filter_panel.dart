@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../models/models.dart';
-import '../state/state.dart';
+import '../viewmodels/viewmodels.dart';
 import '../theme/app_theme.dart';
 
 /// Cascading taxonomy filter (FR-13) for the Search screen.

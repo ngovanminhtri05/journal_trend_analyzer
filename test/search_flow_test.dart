@@ -4,18 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:journal_trend_analyzer/main.dart';
+import 'package:journal_trend_analyzer/screens/search_screen.dart';
 import 'package:journal_trend_analyzer/services/openalex_service.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:journal_trend_analyzer/viewmodels/viewmodels.dart';
+import 'package:provider/provider.dart';
 
 void main() {
   testWidgets('search flow: type → search → loading → result tile', (
     tester,
   ) async {
-    // The app reads bookmarks from shared_preferences at boot; give the test an
-    // in-memory store so the collection tab settles instead of hanging.
-    SharedPreferences.setMockInitialValues(<String, Object>{});
-
     final responseBody = jsonEncode({
       'meta': {'count': 1},
       'results': [
@@ -39,7 +36,20 @@ void main() {
       mailto: 't@e.com',
     );
 
-    await tester.pumpWidget(JournalTrendApp(service: service));
+    // Pump the Search screen directly with its ViewModels. Search is a Lab 02
+    // bonus screen (no longer a Lab 03 tab), so this exercises the real search
+    // flow against the actual SearchScreen widget.
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          Provider<OpenAlexService>.value(value: service),
+          ChangeNotifierProvider(create: (_) => FilterProvider(service)),
+          ChangeNotifierProvider(create: (_) => SearchProvider(service)),
+          ChangeNotifierProvider(create: (_) => TrendProvider(service)),
+        ],
+        child: const MaterialApp(home: Scaffold(body: SearchScreen())),
+      ),
+    );
 
     // Idle prompt is shown before any search.
     expect(find.textContaining('Enter a topic'), findsOneWidget);

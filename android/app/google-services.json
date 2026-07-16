@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "61025513530",
+    "project_id": "journal-analyzer-3c319",
+    "storage_bucket": "journal-analyzer-3c319.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:61025513530:android:7621fee8266ebea59a0503",
+        "android_client_info": {
+          "package_name": "com.prm393.journal_trend_analyzer"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "61025513530-m9dibdr9cas8tjsn6h1v5v0hik18783e.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.prm393.journal_trend_analyzer",
+            "certificate_hash": "15ce37466c8c9d7fe949afdcb1bfb612c8190554"
+          }
+        },
+        {
+          "client_id": "61025513530-0a5q3gqj4gfp7rc0iv2cdh2f1m55r8c8.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAd0D-E49MJlcAV7G6yIj0Ad0y1PAU3cxA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "61025513530-0a5q3gqj4gfp7rc0iv2cdh2f1m55r8c8.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
