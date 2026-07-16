@@ -41,9 +41,22 @@ dependencies:
   google_fonts: ^8.1.0
   shared_preferences: ^2.5.5
   share_plus: ^13.1.0
+  firebase_core: ^4.11.0
+  firebase_auth: ^6.5.4
+  google_sign_in: ^7.2.0
+  firebase_analytics: ^12.4.3
+  firebase_remote_config: ^6.5.3
+  firebase_crashlytics: ^5.2.4
+  firebase_storage: ^13.4.3
+  pdf: ^3.12.0
+  firebase_messaging: ^16.4.1
+  path_provider: ^2.1.6
+  flutter_local_notifications: ^22.0.1
 
 dev_dependencies:
   flutter_test:
+    sdk: flutter
+  integration_test:
     sdk: flutter
 
   # The "flutter_lints" package below contains a set of recommended lints to
@@ -52,6 +65,14 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  mocktail: ^1.0.5
+  patrol: ^4.7.1
+
+# Patrol E2E config (Lab 03 Phase 10).
+patrol:
+  app_name: Journal Trend Analyzer
+  android:
+    package_name: com.prm393.journal_trend_analyzer
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

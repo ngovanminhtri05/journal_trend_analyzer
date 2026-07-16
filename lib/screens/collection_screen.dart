@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../models/models.dart';
 import '../services/services.dart';
-import '../state/state.dart';
+import '../viewmodels/viewmodels.dart';
 import '../theme/app_theme.dart';
 import '../widgets/widgets.dart';
 import 'detail_screen.dart';

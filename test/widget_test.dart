@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/testing.dart';
 import 'package:http/http.dart' as http;
 import 'package:journal_trend_analyzer/main.dart';
+import 'package:journal_trend_analyzer/screens/home_shell.dart';
 import 'package:journal_trend_analyzer/services/openalex_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -17,11 +18,17 @@ void main() {
       mailto: 't@e.com',
     );
 
-    await tester.pumpWidget(JournalTrendApp(service: service));
+    // Bypass the Firebase AuthGate (no Firebase in unit tests) and pump the
+    // navigation shell directly — this test covers the tab shell, not auth.
+    await tester.pumpWidget(
+      JournalTrendApp(service: service, home: const HomeShell()),
+    );
 
-    // The navigation shell renders its three tabs.
+    // The Lab 03 navigation shell renders its four tabs.
     expect(find.byType(NavigationBar), findsOneWidget);
-    expect(find.text('Trends'), findsWidgets);
-    expect(find.text('Dashboard'), findsWidgets);
+    expect(find.text('Home'), findsWidgets);
+    expect(find.text('Journals'), findsWidgets);
+    expect(find.text('Keywords'), findsWidgets);
+    expect(find.text('Profile'), findsWidgets);
   });
 }

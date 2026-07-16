@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../models/models.dart';
 import '../services/openalex_service.dart';
 import '../services/trend_classifier.dart';
+import '../utils/utils.dart';
 import 'view_state.dart';
 
 /// The six aggregate insights shown on the Research Dashboard (FR-7).
@@ -80,10 +81,10 @@ class DashboardProvider extends ChangeNotifier {
       } else {
         summary = DashboardSummary(
           totalPublications: total,
-          averageCitations: _average(topCited),
-          mostActiveYear: _mostActiveYear(years),
-          topJournal: _topName(journals),
-          topAuthor: _topName(authors),
+          averageCitations: averageCitations(topCited),
+          mostActiveYear: mostActiveYear(years),
+          topJournal: topDisplayName(journals),
+          topAuthor: topDisplayName(authors),
           mostInfluential: topCited.isEmpty ? null : topCited.first,
         );
         state = ViewState.success;
@@ -99,22 +100,4 @@ class DashboardProvider extends ChangeNotifier {
   }
 
   Future<void> retry() => load(lastQuery, filters: lastFilters);
-
-  double _average(List<Work> works) {
-    if (works.isEmpty) return 0;
-    final sum = works.fold<int>(0, (acc, w) => acc + w.citedByCount);
-    return sum / works.length;
-  }
-
-  int? _mostActiveYear(List<GroupByItem> years) {
-    if (years.isEmpty) return null;
-    final top = years.reduce((a, b) => a.count >= b.count ? a : b);
-    return int.tryParse(top.key);
-  }
-
-  String? _topName(List<GroupByItem> items) {
-    if (items.isEmpty) return null;
-    final top = items.reduce((a, b) => a.count >= b.count ? a : b);
-    return top.keyDisplayName;
-  }
 }

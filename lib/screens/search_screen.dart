@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../state/state.dart';
+import '../viewmodels/viewmodels.dart';
 import '../widgets/widgets.dart';
 import 'detail_screen.dart';
 

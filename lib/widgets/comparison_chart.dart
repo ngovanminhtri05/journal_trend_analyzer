@@ -1,7 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
-import '../state/state.dart';
+import '../viewmodels/viewmodels.dart';
 
 /// Index-stable colors for compared topics, shared by the chart legend and the
 /// comparison table so a topic keeps the same color everywhere (FR-8).

@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../viewmodels/viewmodels.dart';
 import '../widgets/widgets.dart';
-import 'collection_screen.dart';
-import 'comparison_screen.dart';
-import 'dashboard_screen.dart';
-import 'search_screen.dart';
-import 'trend_screen.dart';
+import 'follow_updates.dart';
+import 'home_screen.dart';
+import 'journals_screen.dart';
+import 'keywords_screen.dart';
+import 'profile_screen.dart';
 
-/// Root navigation shell: a [BottomNavigationBar] over the three main tabs.
+/// Root navigation shell (Lab 03): a [NavigationBar] over the four required
+/// tabs — Home · Journals · Keywords · Profile.
 ///
-/// An [IndexedStack] keeps each tab's state alive when switching, so a search
-/// or a loaded chart is not thrown away on tab change. The Publication Detail
-/// screen (FR-2) is pushed on top of this shell, not a tab.
+/// An [IndexedStack] keeps each tab's state alive when switching, so a search or
+/// a loaded chart is not thrown away on tab change. Detail screens (Publication,
+/// Journal, Keyword) are pushed on top of this shell, not tabs.
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
 
@@ -22,12 +25,36 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> {
   int _index = 0;
 
+  @override
+  void initState() {
+    super.initState();
+    // Plan A: on open, check followed authors/journals for new papers and push
+    // any alerts to the Notification Center. Wait until bookmarks have loaded so
+    // the follow list isn't read empty. Fire-and-forget; never blocks the UI.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scheduleFollowCheck());
+  }
+
+  void _scheduleFollowCheck() {
+    if (!mounted) return;
+    final bookmarks = context.read<BookmarkProvider>();
+    if (bookmarks.ready) {
+      checkFollowUpdates(context);
+      return;
+    }
+    void onReady() {
+      if (!bookmarks.ready) return;
+      bookmarks.removeListener(onReady);
+      if (mounted) checkFollowUpdates(context);
+    }
+
+    bookmarks.addListener(onReady);
+  }
+
   static const _tabs = <_TabConfig>[
-    _TabConfig('Search', Icons.search, SearchScreen()),
-    _TabConfig('Trends', Icons.show_chart, TrendScreen()),
-    _TabConfig('Compare', Icons.compare_arrows, ComparisonScreen()),
-    _TabConfig('Dashboard', Icons.dashboard, DashboardScreen()),
-    _TabConfig('Saved', Icons.bookmark, CollectionScreen()),
+    _TabConfig('Home', Icons.home_outlined, HomeScreen()),
+    _TabConfig('Journals', Icons.menu_book_outlined, JournalsScreen()),
+    _TabConfig('Keywords', Icons.tag, KeywordsScreen()),
+    _TabConfig('Profile', Icons.account_circle_outlined, ProfileScreen()),
   ];
 
   @override
