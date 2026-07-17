@@ -1,4 +1,5 @@
 import 'package:firebase_remote_config/firebase_remote_config.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 
 /// App-wide tunables sourced from Firebase Remote Config (Lab 03 task 9.4).
 ///
@@ -46,7 +47,11 @@ class RemoteConfigService implements RemoteConfigApi {
     await rc.setConfigSettings(
       RemoteConfigSettings(
         fetchTimeout: const Duration(seconds: 10),
-        minimumFetchInterval: const Duration(hours: 1),
+        // Fetch fresh on every launch in debug (so server changes show up
+        // immediately during development/demo); throttle in release.
+        minimumFetchInterval: kDebugMode
+            ? Duration.zero
+            : const Duration(hours: 1),
       ),
     );
     await rc.setDefaults(const {
