@@ -104,7 +104,7 @@ void main() {
       final analytics = _RecordingAnalytics();
       final vm = HomeViewModel(service, analytics: analytics);
 
-      await vm.loadForField('  quantum computing  ');
+      await vm.load(field: '  quantum computing  ');
 
       expect(analytics.searchTopics, ['quantum computing']);
     });
@@ -117,8 +117,9 @@ void main() {
       final analytics = _RecordingAnalytics();
       final vm = HomeViewModel(service, analytics: analytics);
 
-      await vm.loadForField('   ');
+      await vm.load();
 
+      // Global trending (no field) does not log a topic search.
       expect(analytics.searchTopics, isEmpty);
     });
   });

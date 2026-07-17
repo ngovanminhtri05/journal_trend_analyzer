@@ -7,10 +7,10 @@ import '../viewmodels/viewmodels.dart';
 import '../widgets/widgets.dart';
 import 'detail_screen.dart';
 
-/// Home tab (Phase 13.2): a light overview of the **most recent publications in
-/// the user's own research field**. The field is chosen on the Profile tab and
-/// stored locally ([ResearchFieldProvider]); there are no OpenAlex aggregate
-/// totals here — just recent work to skim. All logic lives in [HomeViewModel].
+/// Home tab (Phase 13.2): a light feed of **trending publications** — recently
+/// published and highly cited. It loads on open (global trending); an optional
+/// research field (set on Profile or here) scopes the trend to a topic. No
+/// OpenAlex aggregate totals — just the papers. Logic lives in [HomeViewModel].
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -23,23 +23,27 @@ class HomeScreen extends StatelessWidget {
       return const LoadingView(message: 'Loading…');
     }
 
-    // Keep the ViewModel's feed in sync with the chosen field.
+    // Load trending on open, and reload when the field filter changes.
     final chosen = fieldProvider.field ?? '';
-    if (chosen != vm.field) {
+    if (vm.state == ViewState.idle || chosen != vm.field) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (chosen != vm.field) vm.loadForField(chosen);
+        if (vm.state == ViewState.idle || chosen != vm.field) {
+          vm.load(field: chosen);
+        }
       });
-    }
-
-    if (!fieldProvider.isSet) {
-      return _FieldPrompt(onSave: fieldProvider.setField);
     }
 
     return Column(
       children: [
-        _FieldHeader(
+        _TrendingHeader(
           field: chosen,
-          onEdit: () => _editField(context, fieldProvider, chosen),
+          onEdit: () async {
+            final value = await _promptForField(context, initial: chosen);
+            if (value != null) await fieldProvider.setField(value);
+          },
+          onClear: chosen.isEmpty
+              ? null
+              : () => fieldProvider.setField(''),
         ),
         Expanded(child: _buildBody(context, vm)),
       ],
@@ -50,7 +54,7 @@ class HomeScreen extends StatelessWidget {
     switch (vm.state) {
       case ViewState.idle:
       case ViewState.loading:
-        return const LoadingView(message: 'Loading recent publications…');
+        return const LoadingView(message: 'Loading trending publications…');
       case ViewState.error:
         return ErrorView(
           message: vm.errorMessage ?? 'Something went wrong.',
@@ -58,26 +62,19 @@ class HomeScreen extends StatelessWidget {
         );
       case ViewState.empty:
         return EmptyView(
-          message: 'No recent publications found for "${vm.field}".',
+          message: vm.field.isEmpty
+              ? 'No trending publications right now.'
+              : 'No trending publications found for "${vm.field}".',
         );
       case ViewState.success:
-        return _RecentFeed(vm: vm);
+        return _TrendingFeed(vm: vm);
     }
-  }
-
-  Future<void> _editField(
-    BuildContext context,
-    ResearchFieldProvider provider,
-    String current,
-  ) async {
-    final value = await _promptForField(context, initial: current);
-    if (value != null) await provider.setField(value);
   }
 }
 
-/// Recent-publications list for the chosen field, with the PDF export action.
-class _RecentFeed extends StatelessWidget {
-  const _RecentFeed({required this.vm});
+/// Trending list, with the PDF export action.
+class _TrendingFeed extends StatelessWidget {
+  const _TrendingFeed({required this.vm});
 
   final HomeViewModel vm;
 
@@ -92,7 +89,7 @@ class _RecentFeed extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  'Recent publications',
+                  'Trending now',
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
               ),
@@ -126,74 +123,39 @@ class _RecentFeed extends StatelessWidget {
   }
 }
 
-/// Shown when no research field is set yet: a short prompt + an inline input.
-class _FieldPrompt extends StatelessWidget {
-  const _FieldPrompt({required this.onSave});
-
-  final Future<void> Function(String) onSave;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.interests_outlined, size: 64, color: theme.colorScheme.outline),
-            const SizedBox(height: 16),
-            Text(
-              'Set your research field',
-              style: theme.textTheme.titleLarge,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Home shows the most recent publications in the field you '
-              'research. You can change it any time from Profile.',
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 20),
-            FilledButton.icon(
-              onPressed: () async {
-                final value = await _promptForField(context);
-                if (value != null) await onSave(value);
-              },
-              icon: const Icon(Icons.add),
-              label: const Text('Choose a field'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Header shown once a field is chosen: the field name + an edit affordance.
-class _FieldHeader extends StatelessWidget {
-  const _FieldHeader({required this.field, required this.onEdit});
+/// Header: shows whether the feed is global or field-scoped, with edit/clear.
+class _TrendingHeader extends StatelessWidget {
+  const _TrendingHeader({
+    required this.field,
+    required this.onEdit,
+    this.onClear,
+  });
 
   final String field;
   final VoidCallback onEdit;
+  final VoidCallback? onClear;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scoped = field.isNotEmpty;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 8, 0),
       child: Row(
         children: [
-          Icon(Icons.interests_outlined, size: 18, color: theme.colorScheme.primary),
+          Icon(
+            Icons.trending_up,
+            size: 18,
+            color: theme.colorScheme.primary,
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Your research field', style: theme.textTheme.labelSmall),
+                Text('Trending publications', style: theme.textTheme.labelSmall),
                 Text(
-                  field,
+                  scoped ? 'In $field' : 'Across all fields',
                   style: theme.textTheme.titleMedium,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -201,9 +163,15 @@ class _FieldHeader extends StatelessWidget {
               ],
             ),
           ),
+          if (onClear != null)
+            IconButton(
+              tooltip: 'Show all fields',
+              icon: const Icon(Icons.clear, size: 20),
+              onPressed: onClear,
+            ),
           IconButton(
-            tooltip: 'Change field',
-            icon: const Icon(Icons.edit_outlined, size: 20),
+            tooltip: 'Filter by field',
+            icon: const Icon(Icons.tune, size: 20),
             onPressed: onEdit,
           ),
         ],
@@ -212,14 +180,14 @@ class _FieldHeader extends StatelessWidget {
   }
 }
 
-/// Shared dialog that asks the user to type a research field. Returns the
-/// trimmed value, or null when cancelled / empty.
+/// Dialog that asks the user to type a research field. Returns the trimmed
+/// value, or null when cancelled / empty.
 Future<String?> _promptForField(BuildContext context, {String initial = ''}) {
   final controller = TextEditingController(text: initial);
   return showDialog<String>(
     context: context,
     builder: (ctx) => AlertDialog(
-      title: const Text('Your research field'),
+      title: const Text('Filter trending by field'),
       content: TextField(
         controller: controller,
         autofocus: true,
@@ -236,14 +204,14 @@ Future<String?> _promptForField(BuildContext context, {String initial = ''}) {
         ),
         FilledButton(
           onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-          child: const Text('Save'),
+          child: const Text('Apply'),
         ),
       ],
     ),
   ).then((v) => (v == null || v.isEmpty) ? null : v);
 }
 
-/// Builds the field report PDF, opens the OS share sheet for the saved file,
+/// Builds the trending report PDF, opens the OS share sheet for the saved file,
 /// and — when the cloud upload succeeded — shows the Storage download URL.
 Future<void> _exportReport(BuildContext context, HomeViewModel vm) async {
   final uid = context.read<AuthViewModel?>()?.user?.uid ?? 'anonymous';
@@ -261,7 +229,9 @@ Future<void> _exportReport(BuildContext context, HomeViewModel vm) async {
     await SharePlus.instance.share(
       ShareParams(
         files: [XFile(path)],
-        text: 'Recent publications in ${vm.field}',
+        text: vm.field.isEmpty
+            ? 'Trending publications'
+            : 'Trending publications in ${vm.field}',
       ),
     );
   }

@@ -119,6 +119,23 @@ class OpenAlexService {
     return _parseWorks(json);
   }
 
+  /// Phase 13.2 (Home): **trending** publications — recently published *and*
+  /// highly cited (recent citation momentum). Global by default; pass [field] to
+  /// scope the trend to a topic. No aggregate totals — just the papers.
+  Future<List<Work>> trendingWorks({String? field, int perPage = 25}) async {
+    final since = DateTime.now().subtract(const Duration(days: 365 * 2));
+    final fromDate = '${since.year}-01-01';
+    final params = <String, String>{
+      'filter': 'from_publication_date:$fromDate',
+      'sort': 'cited_by_count:desc',
+      'per-page': '$perPage',
+    };
+    final query = field?.trim() ?? '';
+    if (query.isNotEmpty) params['search'] = query;
+    final json = await _getJson(_apiUri(_worksPath, params));
+    return _parseWorks(json);
+  }
+
   /// FR-6: publication counts per author.
   Future<List<GroupByItem>> groupByAuthor(
     String keyword, {

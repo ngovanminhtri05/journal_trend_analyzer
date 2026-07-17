@@ -33,10 +33,11 @@ class HomeViewModel extends ChangeNotifier {
   ViewState state = ViewState.idle;
   String? errorMessage;
 
-  /// The field currently displayed (mirrors the user's chosen research field).
+  /// Optional field filter (mirrors the user's chosen research field). Empty
+  /// means global trending across all fields.
   String field = '';
 
-  /// Recent publications in [field], newest first.
+  /// Trending publications (recent + highly cited), optionally scoped to [field].
   List<Work> recentWorks = const [];
 
   /// PDF-report export state (task 8.3). [reportFilePath] is the locally-saved
@@ -50,28 +51,23 @@ class HomeViewModel extends ChangeNotifier {
   /// Whether a report can be exported right now.
   bool get canExport => state == ViewState.success && recentWorks.isNotEmpty;
 
-  /// Loads the most recent publications for [value] (the user's field). An empty
-  /// field resets to the idle "pick a field" state.
-  Future<void> loadForField(String value) async {
-    final f = value.trim();
-    if (f.isEmpty) {
-      field = '';
-      recentWorks = const [];
-      state = ViewState.idle;
-      notifyListeners();
-      return;
-    }
-
-    field = f;
+  /// Loads the trending publications feed. With no [field] it shows global
+  /// trending; with a field it scopes the trend to that topic. Always loads
+  /// (there is no "pick a field first" gate) so Home shows papers on open.
+  Future<void> load({String field = ''}) async {
+    this.field = field.trim();
     state = ViewState.loading;
     errorMessage = null;
     notifyListeners();
 
-    // Analytics: reuse search_topic{keyword} for the field load. Fire-and-forget.
-    _analytics?.logSearchTopic(f).ignore();
+    // Analytics: only log a topic search when the feed is field-scoped.
+    if (this.field.isNotEmpty) _analytics?.logSearchTopic(this.field).ignore();
 
     try {
-      final works = await _service.recentWorksByTopic(f, perPage: 25);
+      final works = await _service.trendingWorks(
+        field: this.field.isEmpty ? null : this.field,
+        perPage: 25,
+      );
       recentWorks = works;
       state = works.isEmpty ? ViewState.empty : ViewState.success;
     } on OpenAlexException catch (e) {
@@ -84,7 +80,7 @@ class HomeViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> retry() => loadForField(field);
+  Future<void> retry() => load(field: field);
 
   /// Builds a "recent publications in my field" PDF, saves it locally (share
   /// sheet, no backend needed) and best-effort uploads it to Firebase Storage

@@ -145,13 +145,13 @@ void main() {
       expect(vm.state, ViewState.idle);
     });
 
-    test('loading then success shows recent publications for the field',
+    test('field-scoped trending: recent + highly cited for the field',
         () async {
       final rec = _Recorder();
       final vm = HomeViewModel(
         OpenAlexService(client: rec.client(), mailto: 't@e.com'),
       );
-      final future = vm.loadForField('ai');
+      final future = vm.load(field: 'ai');
       expect(vm.state, ViewState.loading);
       await future;
 
@@ -159,40 +159,54 @@ void main() {
       expect(vm.field, 'ai');
       expect(vm.recentWorks.length, 2);
       expect(vm.recentWorks.first.title, 'Top Paper');
-      // Recent feed sorts by publication date (no group_by aggregation).
+      // Trending = recent window + most-cited first, scoped by the field search.
       expect(
         rec.uris.any(
           (u) =>
               u.path == '/works' &&
               u.queryParameters['search'] == 'ai' &&
-              u.queryParameters['sort'] == 'publication_date:desc' &&
-              u.queryParameters['group_by'] == null,
+              u.queryParameters['sort'] == 'cited_by_count:desc' &&
+              (u.queryParameters['filter'] ?? '')
+                  .contains('from_publication_date'),
         ),
         isTrue,
       );
     });
 
-    test('empty when no recent publications', () async {
-      final rec = _Recorder();
-      final vm = HomeViewModel(
-        OpenAlexService(client: rec.client(empty: true), mailto: 't@e.com'),
-      );
-      await vm.loadForField('zzz');
-      expect(vm.state, ViewState.empty);
-    });
-
-    test('blank field resets to idle', () async {
+    test('global trending when no field is set', () async {
       final rec = _Recorder();
       final vm = HomeViewModel(
         OpenAlexService(client: rec.client(), mailto: 't@e.com'),
       );
-      await vm.loadForField('   ');
-      expect(vm.state, ViewState.idle);
+      await vm.load();
+
+      expect(vm.state, ViewState.success);
+      expect(vm.field, '');
+      expect(vm.recentWorks, isNotEmpty);
+      // Global trending carries no search term.
+      expect(
+        rec.uris.any(
+          (u) =>
+              u.path == '/works' &&
+              u.queryParameters['search'] == null &&
+              u.queryParameters['sort'] == 'cited_by_count:desc',
+        ),
+        isTrue,
+      );
+    });
+
+    test('empty when no trending publications', () async {
+      final rec = _Recorder();
+      final vm = HomeViewModel(
+        OpenAlexService(client: rec.client(empty: true), mailto: 't@e.com'),
+      );
+      await vm.load(field: 'zzz');
+      expect(vm.state, ViewState.empty);
     });
 
     test('error on failure', () async {
       final vm = HomeViewModel(_failing(500));
-      await vm.loadForField('ai');
+      await vm.load(field: 'ai');
       expect(vm.state, ViewState.error);
     });
   });
