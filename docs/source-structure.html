@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Journal Trend Analyzer — Cấu trúc Source Code</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+    color: #2F3437; line-height: 1.55; font-size: 12px; margin: 0;
+  }
+  h1 { font-family: Georgia, "Times New Roman", serif; font-size: 26px; margin: 0 0 2px; letter-spacing: -0.4px; }
+  h2 { font-family: Georgia, serif; font-size: 17px; margin: 22px 0 8px; padding-bottom: 4px; border-bottom: 1px solid #EAEAEA; }
+  h3 { font-size: 13px; margin: 14px 0 4px; }
+  .sub { color: #787774; font-size: 12px; margin: 0 0 4px; }
+  .meta { color: #787774; font-size: 11px; margin: 0 0 14px; }
+  code, pre, .mono { font-family: "JetBrains Mono", "Consolas", monospace; }
+  pre {
+    background: #FBFBFA; border: 1px solid #EAEAEA; border-radius: 8px;
+    padding: 12px 14px; font-size: 11px; line-height: 1.5; white-space: pre; overflow: visible;
+  }
+  table { width: 100%; border-collapse: collapse; margin: 6px 0 4px; font-size: 11.5px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #EAEAEA; vertical-align: top; }
+  th { color: #787774; font-weight: 600; text-transform: uppercase; font-size: 10px; letter-spacing: 0.4px; }
+  td code { background: #F1F0EE; padding: 1px 4px; border-radius: 3px; font-size: 10.5px; }
+  .flow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 8px 0; }
+  .box { border: 1px solid #EAEAEA; border-radius: 6px; padding: 6px 10px; background: #FBFBFA; font-size: 11px; }
+  .arr { color: #787774; font-weight: 700; }
+  .pill { display:inline-block; background:#E1F3FE; color:#1F6C9F; border-radius:999px; padding:1px 8px; font-size:10px; font-weight:600; }
+  ul { margin: 4px 0 4px 0; padding-left: 18px; }
+  li { margin: 2px 0; }
+  .small { font-size: 10.5px; color:#787774; }
+  footer { margin-top: 20px; padding-top: 8px; border-top: 1px solid #EAEAEA; color:#787774; font-size:10px; }
+</style>
+</head>
+<body>
+
+  <h1>Journal Trend Analyzer</h1>
+  <p class="sub">Mô tả cấu trúc source code &middot; Flutter mobile app (PRM393 Lab2)</p>
+  <p class="meta">Nguồn dữ liệu: OpenAlex API &middot; State: Provider &middot; 29 file Dart, ~1.826 dòng &middot; 34 test</p>
+
+  <h2>1. Tổng quan kiến trúc</h2>
+  <p>Ứng dụng theo <b>kiến trúc phân lớp (layered / clean separation)</b>, dữ liệu chảy một chiều.
+  Tầng giao diện <b>không</b> gọi API trực tiếp — chỉ đọc trạng thái từ Provider; Provider gọi Service;
+  Service nói chuyện với OpenAlex và parse JSON. Mỗi lớp một trách nhiệm nên dễ test và bảo trì.</p>
+  <div class="flow">
+    <span class="box">OpenAlex API</span><span class="arr">&rarr;</span>
+    <span class="box"><b>services/</b><br><span class="small">HTTP + parse + lỗi</span></span><span class="arr">&rarr;</span>
+    <span class="box"><b>state/</b><br><span class="small">Provider + ViewState</span></span><span class="arr">&rarr;</span>
+    <span class="box"><b>screens/ + widgets/</b><br><span class="small">UI</span></span>
+  </div>
+  <p class="small">models/ (khuôn dữ liệu) dùng chung cho services và UI. theme/ định nghĩa giao diện tập trung.</p>
+
+  <h2>2. Cây thư mục</h2>
+  <pre>lib/
+├── main.dart                  # entry: MultiProvider + MaterialApp + theme
+├── models/                    # khuôn dữ liệu (manual fromJson, null-safe)
+│   ├── work.dart              # Work: title, year, citations, journal, authors, DOI, abstract
+│   ├── author.dart            # Author
+│   ├── source.dart            # Source (journal)
+│   ├── group_by_item.dart     # GroupByItem {key, key_display_name, count}
+│   └── models.dart            # barrel export
+├── services/                  # tầng truy cập dữ liệu
+│   ├── openalex_service.dart  # 6 hàm API (search/topCited/groupBy*/totalCount)
+│   ├── openalex_exceptions.dart # Network / RateLimit / Parse exception
+│   ├── abstract_decoder.dart  # reconstructAbstract(inverted_index)
+│   └── services.dart          # barrel export
+├── state/                     # quản lý trạng thái (Provider / ChangeNotifier)
+│   ├── view_state.dart        # enum: idle/loading/success/empty/error
+│   ├── search_provider.dart   # FR-1
+│   ├── trend_provider.dart    # FR-3/4/5/6 (Future.wait)
+│   ├── dashboard_provider.dart# FR-7 + DashboardSummary (6 chỉ số)
+│   └── state.dart             # barrel export
+├── screens/                   # 4 màn hình chính + shell + helper
+│   ├── home_shell.dart        # BottomNav (NavigationBar) + IndexedStack
+│   ├── search_screen.dart     # FR-1
+│   ├── detail_screen.dart     # FR-2 (DOI + abstract)
+│   ├── trend_screen.dart      # FR-3/4/5/6
+│   ├── dashboard_screen.dart  # FR-7
+│   ├── topic_sync.dart        # đồng bộ topic giữa các tab
+│   └── screens.dart           # barrel export
+├── widgets/                   # widget tái sử dụng
+│   ├── paper_card.dart        # thẻ bài báo
+│   ├── stat_card.dart         # thẻ chỉ số dashboard
+│   ├── year_bar_chart.dart    # biểu đồ cột theo năm (fl_chart)
+│   ├── ranked_count_list.dart # danh sách xếp hạng (journal/author)
+│   ├── state_views.dart       # Loading / Error+Retry / Empty
+│   ├── responsive_body.dart   # giới hạn bề rộng màn lớn
+│   └── widgets.dart           # barrel export
+└── theme/
+    └── app_theme.dart         # hệ thiết kế (màu, font, card, nav)
+
+test/                          # 34 test
+├── models_test.dart           ├── openalex_service_test.dart
+├── abstract_decoder_test.dart ├── providers_test.dart
+├── widget_test.dart           └── search_flow_test.dart</pre>
+
+  <h2>3. Trách nhiệm từng lớp</h2>
+  <table>
+    <tr><th>Lớp</th><th>Trách nhiệm</th><th>Thành phần chính</th></tr>
+    <tr><td><b>models/</b></td><td>Khuôn dữ liệu, parse JSON thủ công, null-safe, fallback <code>display_name→title</code>, <code>doi→ids.doi</code></td><td><code>Work</code>, <code>Author</code>, <code>Source</code>, <code>GroupByItem</code></td></tr>
+    <tr><td><b>services/</b></td><td>Gọi OpenAlex, dựng URL (search/sort/group_by/mailto), map lỗi có kiểu, decode abstract</td><td><code>OpenAlexService</code>, exceptions, <code>reconstructAbstract</code></td></tr>
+    <tr><td><b>state/</b></td><td>Giữ trạng thái màn hình (loading/success/empty/error), gọi service, đẩy dữ liệu cho UI</td><td>3 <code>ChangeNotifier</code> + <code>ViewState</code></td></tr>
+    <tr><td><b>screens/</b></td><td>Bố cục từng màn hình, điều hướng; chỉ đọc Provider</td><td>shell + 4 screen + detail</td></tr>
+    <tr><td><b>widgets/</b></td><td>Thành phần UI dùng lại nhiều nơi</td><td>card, chart, ranked list, state views</td></tr>
+    <tr><td><b>theme/</b></td><td>Định nghĩa giao diện tập trung (1 nơi đổi toàn app)</td><td><code>AppTheme.build()</code></td></tr>
+  </table>
+
+  <h2>4. Ánh xạ màn hình &harr; yêu cầu nghiệp vụ</h2>
+  <table>
+    <tr><th>Màn hình</th><th>FR</th><th>Provider</th><th>Endpoint OpenAlex</th></tr>
+    <tr><td>Search</td><td>FR-1</td><td><code>SearchProvider</code></td><td><code>/works?search=</code></td></tr>
+    <tr><td>Detail</td><td>FR-2</td><td>— (nhận <code>Work</code>)</td><td>decode <code>abstract_inverted_index</code></td></tr>
+    <tr><td rowspan="2">Trends</td><td>FR-3</td><td rowspan="2"><code>TrendProvider</code></td><td><code>group_by=publication_year</code></td></tr>
+    <tr><td>FR-4/5/6</td><td><code>sort=cited_by_count:desc</code>, <code>group_by=source.id</code> / <code>author.id</code></td></tr>
+    <tr><td>Dashboard</td><td>FR-7</td><td><code>DashboardProvider</code></td><td><code>meta.count</code> + group_by + topCited</td></tr>
+  </table>
+
+  <h2>5. Luồng dữ liệu mẫu (Search)</h2>
+  <div class="flow">
+    <span class="box">SearchScreen<br><span class="small">nhập keyword</span></span><span class="arr">&rarr;</span>
+    <span class="box">SearchProvider.search()<br><span class="small">state=loading</span></span><span class="arr">&rarr;</span>
+    <span class="box">OpenAlexService<br><span class="small">.searchWorks()</span></span><span class="arr">&rarr;</span>
+    <span class="box">OpenAlex API</span>
+  </div>
+  <div class="flow">
+    <span class="box">JSON</span><span class="arr">&rarr;</span>
+    <span class="box">List&lt;Work&gt;<br><span class="small">parse</span></span><span class="arr">&rarr;</span>
+    <span class="box">state=success/empty/error<br><span class="small">notifyListeners()</span></span><span class="arr">&rarr;</span>
+    <span class="box">UI rebuild<br><span class="small">danh sách / trạng thái</span></span>
+  </div>
+  <p class="small">Topic tìm ở tab Search được chia sẻ sang Trends &amp; Dashboard qua <code>topic_sync.dart</code> (đọc <code>SearchProvider.lastQuery</code>).</p>
+
+  <h2>6. Kỹ thuật &amp; chất lượng</h2>
+  <ul>
+    <li><b>Async:</b> <code>Future</code>/<code>async-await</code>, <code>Future.wait</code> tải song song, timeout 15s.</li>
+    <li><b>Xử lý lỗi:</b> exception có kiểu (Network / RateLimit 429 / Parse) &rarr; UI hiện message + Retry.</li>
+    <li><b>OpenAlex aggregation:</b> dùng <code>group_by</code> để server thống kê sẵn (nhẹ client).</li>
+    <li><b>Tách lớp &amp; test:</b> <code>http.Client</code> được inject &rarr; test bằng <code>MockClient</code> không cần mạng.</li>
+    <li><b>Design system:</b> editorial minimalism tập trung ở <code>app_theme.dart</code> (google_fonts).</li>
+    <li><b>Kiểm thử:</b> 34 test (model, decode abstract, URL/parse/lỗi service, chuyển trạng thái provider, luồng search) &middot; <span class="pill">flutter analyze: 0 lỗi</span></li>
+  </ul>
+
+  <footer>PRM393 Lab2 — Journal Trend Analyzer &middot; Tài liệu cấu trúc source code (tự sinh).</footer>
+
+</body>
+</html>
