@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Patrol E2E Evidence — Journal Trend Analyzer (Lab 03)</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --ink: #1a1c1f; --muted: #5b6470;
+    --line: #e4e7ec; --pass: #157347; --pass-bg: #e6f4ec; --warn: #8a6d00;
+    --warn-bg: #fbf3d8; --accent: #2b5bd7; --code-bg: #f2f3f5; --shadow: 0 1px 3px rgba(16,24,40,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1216; --card: #171b21; --ink: #e7eaee; --muted: #9aa4b2;
+      --line: #262c35; --pass: #46c07f; --pass-bg: #10281c; --warn: #e0be55;
+      --warn-bg: #2a2410; --accent: #6f9bff; --code-bg: #1d2229; --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 940px; margin: 0 auto; padding: 32px 20px 64px; }
+  header.doc {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 28px 28px 24px; box-shadow: var(--shadow); margin-bottom: 22px;
+  }
+  h1 { margin: 0 0 6px; font-size: 26px; letter-spacing: -.01em; }
+  .sub { color: var(--muted); font-size: 14px; margin: 0; }
+  .badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+  .badge {
+    font-size: 12.5px; font-weight: 600; padding: 5px 11px; border-radius: 999px;
+    border: 1px solid var(--line); background: var(--code-bg); color: var(--ink);
+  }
+  .badge.ok { color: var(--pass); background: var(--pass-bg); border-color: transparent; }
+  .hero {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 14px; margin: 22px 0;
+  }
+  .stat {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 16px 18px; box-shadow: var(--shadow);
+  }
+  .stat .n { font-size: 28px; font-weight: 700; letter-spacing: -.02em; }
+  .stat .n.ok { color: var(--pass); }
+  .stat .l { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+  section {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 22px 24px; box-shadow: var(--shadow); margin-bottom: 18px;
+  }
+  h2 { font-size: 17px; margin: 0 0 14px; letter-spacing: -.01em; }
+  h2 .step { color: var(--muted); font-weight: 600; }
+  p { margin: 0 0 12px; }
+  .tbl-scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 560px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 600; }
+  tbody tr:last-child td { border-bottom: none; }
+  td.mono, .mono { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; font-size: 12.5px; }
+  .pill { display: inline-block; font-size: 12px; font-weight: 700; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+  .pill.pass { color: var(--pass); background: var(--pass-bg); }
+  code { background: var(--code-bg); padding: 1.5px 6px; border-radius: 5px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; }
+  pre {
+    background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px;
+    padding: 14px 16px; overflow-x: auto; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12.5px; line-height: 1.5; margin: 0 0 6px;
+  }
+  ul { margin: 0 0 12px; padding-left: 20px; }
+  li { margin: 4px 0; }
+  .fix { border-left: 3px solid var(--accent); padding: 4px 0 4px 14px; margin: 12px 0; }
+  .fix b { display: block; margin-bottom: 2px; }
+  .muted { color: var(--muted); }
+  .flow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 6px 0 4px; }
+  .flow .box { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; font-weight: 600; font-size: 13px; background: var(--code-bg); }
+  .flow .arrow { color: var(--muted); }
+  .flow .box.final { color: var(--pass); border-color: var(--pass); }
+  footer { color: var(--muted); font-size: 12.5px; text-align: center; margin-top: 26px; }
+  a { color: var(--accent); }
+  @media print {
+    body { background: #fff; }
+    section, header.doc, .stat { box-shadow: none; break-inside: avoid; }
+    .wrap { max-width: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="doc">
+    <h1>Patrol E2E Test Evidence</h1>
+    <p class="sub">PRM393 Lab 03 — Firebase-Powered Journal Trend Analyzer (Flutter · Android)</p>
+    <div class="badges">
+      <span class="badge ok">12 / 12 cases PASSED</span>
+      <span class="badge">Run: 2026-07-17 (+07)</span>
+      <span class="badge">Device: emulator-5554 (Android)</span>
+      <span class="badge">patrol 4.7.1 · patrol_cli 4.5.1</span>
+    </div>
+  </header>
+
+  <div class="hero">
+    <div class="stat"><div class="n ok">12</div><div class="l">Cases passed</div></div>
+    <div class="stat"><div class="n ok">0</div><div class="l">Failed</div></div>
+    <div class="stat"><div class="n ok">100%</div><div class="l">Pass rate</div></div>
+    <div class="stat"><div class="n">7m 53s</div><div class="l">Wall-clock run time</div></div>
+  </div>
+
+  <section>
+    <h2>1. Summary</h2>
+    <p>
+      The full Patrol end-to-end suite for the Journal Trend Analyzer was executed on a live Android
+      emulator against the <strong>real OpenAlex API</strong> and a real Firebase configuration.
+      All <strong>12 cases pass in a single run</strong> — the boot smoke test, the two Google
+      authentication flows (TC1 / TC11), and the eight feature cases (TC2–TC10). The authentication
+      cases drive the real auth gate and the <strong>native Google account chooser</strong> with a real
+      account signed into the device (<code>ngovanminhtri05@gmail.com</code>).
+    </p>
+    <p class="muted">
+      These cases were previously written but had never been executed against the running UI. The
+      first executions surfaced 7 failures across two prerequisites (device auth + finder mismatches);
+      all were diagnosed to real test-layer issues (not app defects) and fixed. See §4.
+    </p>
+  </section>
+
+  <section>
+    <h2>2. Test environment</h2>
+    <div class="tbl-scroll">
+    <table>
+      <tbody>
+        <tr><th>Item</th><th>Value</th></tr>
+        <tr><td>App</td><td>journal_trend_analyzer — Flutter (MVVM + Provider), Firebase integrated</td></tr>
+        <tr><td>E2E framework</td><td class="mono">patrol ^4.7.1 · patrol_cli 4.5.1 · patrol_finders 3.5.0</td></tr>
+        <tr><td>Toolchain</td><td class="mono">Flutter 3.41.9 / Dart 3.11 · Android SDK D:\Android\Sdk</td></tr>
+        <tr><td>Device</td><td class="mono">emulator-5554 — AVD prm393_pixel · logical 411×731 · density 420</td></tr>
+        <tr><td>Google account</td><td class="mono">ngovanminhtri05@gmail.com (for TC1 / TC11 native chooser)</td></tr>
+        <tr><td>Data source</td><td>OpenAlex API (live, called directly from the client — no backend)</td></tr>
+        <tr><td>Firebase</td><td class="mono">journal-analyzer-3c319 (Blaze) — Auth + Remote Config live on-device</td></tr>
+        <tr><td>APK build</td><td class="mono">test_bundle.dart → built in 34.8s, installed &amp; run on device</td></tr>
+        <tr><td>Bundle path</td><td class="mono">integration_test/ (7 target files)</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>3. Results — all 12 test cases</h2>
+    <div class="tbl-scroll">
+    <table>
+      <thead>
+        <tr><th>Case</th><th>Scenario</th><th>Source file</th><th>Time</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="mono">Smoke</td><td>App boots into the 4-tab shell</td><td class="mono">app_test.dart</td><td class="mono">3s</td><td><span class="pill pass">PASS</span></td></tr>
+        <tr><td class="mono">TC1</td><td>Google Sign-In lands on the Home shell</td><td class="mono">authentication_test.dart</td><td class="mono">40s</td><td><span class="pill pass">PASS</span></td></tr>
+        <tr><td class="mono">TC2</td><td>Topic search shows the overview dashboard</td><td class="mono">publication_test.dart</td><td class="mono">12s</td><td><span class="pill pass">PASS</span></td></tr>
+        <tr><td class="mono">TC3</td><td>Opening a publication shows its detail</td><td class="mono">publication_test.dart</td><td class="mono">13s</td><td><span class="pill pass">PASS</span></td></tr>
+        <tr><td class="mono">TC4</td><td>Journals tab ranks top journals for a topic</td><td class="mono">journal_test.dart</td><td class="mono">9s</td><td><span class="pill pass">PASS</span></td></tr>
+        <tr><td class="mono">TC5</td><td>Opening a journal shows its detail</td><td class="mono">journal_test.dart</td><td class="mono">13s</td><td><span class="pill pass">PASS</span></td></tr>
+        <tr><td class="mono">TC6</td><td>Keywords tab ranks frequent keywords</td><td class="mono">keyword_test.dart</td><td class="mono">10s</td><td><span class="pill pass">PASS</span></td></tr>
+        <tr><td class="mono">TC7</td><td>Opening a keyword shows its analysis</td><td class="mono">keyword_test.dart</td><td class="mono">13s</td><td><span class="pill pass">PASS</span></td></tr>
+        <tr><td class="mono">TC8</td><td>Profile tab shows the signed-in account</td><td class="mono">profile_test.dart</td><td class="mono">8s</td><td><span class="pill pass">PASS</span></td></tr>
+        <tr><td class="mono">TC9</td><td>Exporting a PDF report opens the share sheet</td><td class="mono">export_test.dart</td><td class="mono">19s</td><td><span class="pill pass">PASS</span></td></tr>
+        <tr><td class="mono">TC10</td><td>Profile shows the Remote Config values</td><td class="mono">profile_test.dart</td><td class="mono">5s</td><td><span class="pill pass">PASS</span></td></tr>
+        <tr><td class="mono">TC11</td><td>Sign out returns to the Login screen</td><td class="mono">authentication_test.dart</td><td class="mono">26s</td><td><span class="pill pass">PASS</span></td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>4. What was fixed <span class="step">— test-layer only (no app behaviour changed)</span></h2>
+    <p>
+      The initial executions produced failures traced to mismatches between the test finders and the
+      real widget tree — the tests had never been run against the built UI. The root cause of four
+      feature failures was a single fact:
+    </p>
+    <div class="fix">
+      <b>Root cause · StatCard renders labels UPPER-CASED</b>
+      <span class="muted"><code>stat_card.dart</code> uses <code>Text(label.toUpperCase())</code>. Patrol's text
+      finder is case-sensitive, so <code>$('Total publications')</code> could never match the on-screen
+      <code>TOTAL PUBLICATIONS</code>. Fixed by asserting the real rendered text (e.g.
+      <code>$('TOTAL PUBLICATIONS')</code>, <code>$('PUBLICATIONS ACROSS TOP JOURNALS')</code>).</span>
+    </div>
+    <div class="fix">
+      <b>TC4 / TC5 · Ambiguous wait anchor</b>
+      <span class="muted">The wait anchored on <code>"Top journals"</code>, but the search-bar hint
+      (<code>"Top journals for a topic…"</code>) also contains that text, so the wait passed before results
+      loaded. Re-anchored on the success-only summary card <code>PUBLICATIONS ACROSS TOP JOURNALS</code>.</span>
+    </div>
+    <div class="fix">
+      <b>TC8 / TC11 · Sign-out button below the fold</b>
+      <span class="muted">The Profile list is scrollable and the Sign out button sits at the bottom
+      (not built until scrolled into a lazy list). Added <code>.scrollTo()</code> before asserting / tapping it.</span>
+    </div>
+    <div class="fix">
+      <b>TC3 · Home most-influential card under a fixed-height chart</b>
+      <span class="muted">On the Home overview the paper card sits below a 240&nbsp;px interactive
+      <code>fl_chart</code> (which absorbs drag gestures) and can be absent when a topic has no cited works.
+      Re-routed TC3 to open a publication from a journal's chart-free "Most cited publications" list —
+      a deterministic path that still verifies the Publication Detail screen (Authors / Abstract).</span>
+    </div>
+    <div class="fix">
+      <b>TC1 · Cold sign-in timeout</b>
+      <span class="muted">The first cold sign-in runs Firebase auth plus the startup RemoteConfig fetch
+      (up to a 10s timeout) before the shell renders. The wait for the NavigationBar was raised from 30s
+      to 60s so the cold path completes.</span>
+    </div>
+    <div class="fix">
+      <b>TC1 / TC11 · Device prerequisite (R2)</b>
+      <span class="muted">These drive the native Google chooser, which needs a real account on the device.
+      A Google account was added to the emulator (Settings → Add account); the chooser then resolves
+      <code>Selector(textContains: '@')</code> to that account.</span>
+    </div>
+    <p class="muted">
+      No production code was modified — the app behaves as designed; only the E2E assertions/timeouts
+      were corrected to match the real UI. <code>flutter analyze integration_test</code>: <em>No issues found.</em>
+    </p>
+  </section>
+
+  <section>
+    <h2>5. Run history</h2>
+    <p>Iterative diagnosis, captured in <code>docs/patrol-evidence/*.log</code>:</p>
+    <div class="flow">
+      <span class="box">Non-auth run 1 · 5/10</span>
+      <span class="arrow">→</span>
+      <span class="box">6/10 → 10/10<br><span class="muted" style="font-weight:400">(finder fixes)</span></span>
+      <span class="arrow">→</span>
+      <span class="box">Add Google account</span>
+      <span class="arrow">→</span>
+      <span class="box">Auth 2/2<br><span class="muted" style="font-weight:400">(timeout + scroll)</span></span>
+      <span class="arrow">→</span>
+      <span class="box final">Full suite · 12/12 ✓</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>6. Reproduction</h2>
+    <p>From the project root (<code>d:\PRM393\Lab2</code>) with an emulator online and a Google account added:</p>
+    <pre>set PATH=D:\flutter\bin;D:\Android\Sdk\platform-tools;D:\PubCache\bin;%PATH%
+
+patrol test ^
+  --target integration_test/app_test.dart ^
+  --target integration_test/authentication_test.dart ^
+  --target integration_test/publication_test.dart ^
+  --target integration_test/journal_test.dart ^
+  --target integration_test/keyword_test.dart ^
+  --target integration_test/profile_test.dart ^
+  --target integration_test/export_test.dart ^
+  --device emulator-5554</pre>
+    <p class="muted" style="margin-top:12px">
+      Raw console log: <code>docs/patrol-evidence/run-full12.log</code> ·
+      Native Gradle report: <code>build/app/reports/androidTests/connected/debug/index.html</code>
+    </p>
+    <p class="muted">
+      Notes: TC1 / TC11 need a Google account on the device (verify with
+      <code>adb shell dumpsys account | grep Accounts:</code>). The debug/test APKs are large — wipe the
+      AVD if you hit <code>INSTALL_FAILED_INSUFFICIENT_STORAGE</code>. Feature cases hit the live OpenAlex
+      API, so a stable network connection is required.
+    </p>
+  </section>
+
+  <footer>
+    Generated as Lab 03 Phase 10 (Patrol E2E) evidence · PRM393 Journal Trend Analyzer · 2026-07-17
+  </footer>
+
+</div>
+</body>
+</html>

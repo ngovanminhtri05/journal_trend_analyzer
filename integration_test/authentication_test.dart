@@ -29,9 +29,10 @@ void main() {
     // Sign in first (clearPackageData means we start signed out).
     await signInWithGoogle($);
 
-    // Go to Profile and sign out.
+    // Go to Profile and sign out. The button is at the bottom of the
+    // scrolling profile list, so bring it into view before tapping.
     await openTab($, 'Profile');
-    await $.waitUntilVisible($('Sign out'));
+    await $('Sign out').scrollTo();
     await $('Sign out').tap();
 
     // Back to the Login screen.

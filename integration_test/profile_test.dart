@@ -14,6 +14,9 @@ void main() {
 
     expect($('E2E Tester'), findsWidgets);
     expect($('e2e@example.com'), findsWidgets);
+
+    // The Sign out button is at the bottom of the scrolling profile list.
+    await $('Sign out').scrollTo();
     expect($('Sign out'), findsOneWidget);
   });
 
