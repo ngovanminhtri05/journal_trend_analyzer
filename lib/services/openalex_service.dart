@@ -101,6 +101,27 @@ class OpenAlexService {
     perPage: perPage,
   );
 
+  /// Phase 13.3+ (Journal detail search): works published in [sourceId] that
+  /// match a free-text [query] (a field/topic within that journal), newest
+  /// first. With no query it returns the journal's recent works.
+  Future<List<Work>> worksInSource(
+    String sourceId, {
+    String? query,
+    int perPage = 50,
+  }) async {
+    final id = shortOpenAlexId(sourceId);
+    if (id.isEmpty) return const [];
+    final params = <String, String>{
+      'filter': 'primary_location.source.id:$id',
+      'sort': 'publication_date:desc',
+      'per-page': '$perPage',
+    };
+    final q = query?.trim() ?? '';
+    if (q.isNotEmpty) params['search'] = q;
+    final json = await _getJson(_apiUri(_worksPath, params));
+    return _parseWorks(json);
+  }
+
   /// Phase 13.2 (Home): the most recent publications for a topic/field, newest
   /// first. No aggregation — a light, per-paper feed for the user's own field.
   Future<List<Work>> recentWorksByTopic(

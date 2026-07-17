@@ -66,8 +66,18 @@ class JournalDetailViewModel extends ChangeNotifier {
   /// Number of recent works fetched (a recent-output sample, not a global sum).
   int recentWorkCount = 0;
 
+  /// Active in-journal search term (empty = browsing volumes).
+  String query = '';
+
+  /// Articles in this journal matching [query], newest first.
+  List<Work> searchResults = const [];
+
+  bool get isSearching => query.isNotEmpty;
+
   Future<void> load(String sourceId) async {
     _lastSourceId = sourceId;
+    query = '';
+    searchResults = const [];
     state = ViewState.loading;
     errorMessage = null;
     notifyListeners();
@@ -87,5 +97,42 @@ class JournalDetailViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> retry() => load(_lastSourceId);
+  /// Searches this journal for articles matching [q] (a field/topic within the
+  /// journal). An empty query clears the search and returns to the volumes view.
+  Future<void> search(String q) async {
+    query = q.trim();
+    if (query.isEmpty) {
+      clearSearch();
+      return;
+    }
+    state = ViewState.loading;
+    errorMessage = null;
+    notifyListeners();
+
+    try {
+      searchResults = await _service.worksInSource(
+        _lastSourceId,
+        query: query,
+        perPage: 50,
+      );
+      state = searchResults.isEmpty ? ViewState.empty : ViewState.success;
+    } on OpenAlexException catch (e) {
+      errorMessage = e.message;
+      state = ViewState.error;
+    } catch (_) {
+      errorMessage = 'Something went wrong. Please try again.';
+      state = ViewState.error;
+    }
+    notifyListeners();
+  }
+
+  void clearSearch() {
+    query = '';
+    searchResults = const [];
+    state = volumes.isEmpty ? ViewState.empty : ViewState.success;
+    notifyListeners();
+  }
+
+  Future<void> retry() =>
+      isSearching ? search(query) : load(_lastSourceId);
 }

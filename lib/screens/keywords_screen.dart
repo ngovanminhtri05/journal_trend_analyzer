@@ -159,7 +159,7 @@ class KeywordDetailScreen extends StatelessWidget {
       child: ChangeNotifierProvider<KeywordDetailViewModel>(
         create: (ctx) =>
             KeywordDetailViewModel(ctx.read<OpenAlexService>())
-              ..load(keyword.key),
+              ..load(keyword.key, keywordText: keyword.keyDisplayName),
         child: Scaffold(
           appBar: AppBar(title: Text(keyword.keyDisplayName)),
           body: ResponsiveBody(
@@ -202,6 +202,28 @@ class KeywordDetailScreen extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
+            // Top papers containing the keyword — shown first (Phase 13.4+).
+            Text('Top publications', style: theme.textTheme.titleSmall),
+            const SizedBox(height: 8),
+            if (vm.relatedWorks.isEmpty)
+              Text(
+                'No publications found for this keyword.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.outline,
+                ),
+              )
+            else
+              for (var i = 0; i < vm.relatedWorks.length; i++)
+                PaperCard(
+                  work: vm.relatedWorks[i],
+                  rank: i + 1,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => DetailScreen(work: vm.relatedWorks[i]),
+                    ),
+                  ),
+                ),
+            const SizedBox(height: 16),
             Text('Publications over time', style: theme.textTheme.titleSmall),
             const SizedBox(height: 8),
             YearBarChart(data: vm.yearCounts),
@@ -229,19 +251,6 @@ class KeywordDetailScreen extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 16),
-            Text('Most cited publications', style: theme.textTheme.titleSmall),
-            const SizedBox(height: 8),
-            for (var i = 0; i < vm.relatedWorks.length; i++)
-              PaperCard(
-                work: vm.relatedWorks[i],
-                rank: i + 1,
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => DetailScreen(work: vm.relatedWorks[i]),
-                  ),
-                ),
-              ),
           ],
         );
     }
