@@ -38,6 +38,33 @@ class _Recorder {
 
     return MockClient((req) async {
       uris.add(req.url);
+      // Phase 13.3: journal search by name via /sources.
+      if (req.url.path == '/sources') {
+        return http.Response(
+          jsonEncode({
+            'meta': {'count': empty ? 0 : 2},
+            'results': empty
+                ? const []
+                : [
+                    {
+                      'id': 'https://openalex.org/S1',
+                      'display_name': 'Nature',
+                      'host_organization_name': 'Springer',
+                      'works_count': 1000,
+                      'type': 'journal',
+                    },
+                    {
+                      'id': 'https://openalex.org/S2',
+                      'display_name': 'Nature Communications',
+                      'host_organization_name': 'Springer',
+                      'works_count': 500,
+                      'type': 'journal',
+                    },
+                  ],
+          }),
+          200,
+        );
+      }
       final gb = req.url.queryParameters['group_by'];
       switch (gb) {
         case 'publication_year':
@@ -118,68 +145,74 @@ void main() {
       expect(vm.state, ViewState.idle);
     });
 
-    test('loading then success computes the overview', () async {
+    test('loading then success shows recent publications for the field',
+        () async {
       final rec = _Recorder();
       final vm = HomeViewModel(
         OpenAlexService(client: rec.client(), mailto: 't@e.com'),
       );
-      final future = vm.search('ai');
+      final future = vm.loadForField('ai');
       expect(vm.state, ViewState.loading);
       await future;
 
       expect(vm.state, ViewState.success);
-      final s = vm.summary!;
-      expect(s.totalPublications, 4321);
-      expect(s.mostActiveYear, 2022);
-      expect(s.topJournal, 'Nature');
-      expect(s.topAuthor, 'Alice'); // highest count wins, not first
-      expect(s.mostInfluential?.title, 'Top Paper');
-      expect(s.averageCitations, 500); // (800 + 200) / 2
-      expect(vm.yearCounts, isNotEmpty);
+      expect(vm.field, 'ai');
+      expect(vm.recentWorks.length, 2);
+      expect(vm.recentWorks.first.title, 'Top Paper');
+      // Recent feed sorts by publication date (no group_by aggregation).
+      expect(
+        rec.uris.any(
+          (u) =>
+              u.path == '/works' &&
+              u.queryParameters['search'] == 'ai' &&
+              u.queryParameters['sort'] == 'publication_date:desc' &&
+              u.queryParameters['group_by'] == null,
+        ),
+        isTrue,
+      );
     });
 
-    test('empty when total count is zero', () async {
+    test('empty when no recent publications', () async {
       final rec = _Recorder();
       final vm = HomeViewModel(
         OpenAlexService(client: rec.client(empty: true), mailto: 't@e.com'),
       );
-      await vm.search('zzz');
+      await vm.loadForField('zzz');
       expect(vm.state, ViewState.empty);
     });
 
-    test('blank query ignored', () async {
+    test('blank field resets to idle', () async {
       final rec = _Recorder();
       final vm = HomeViewModel(
         OpenAlexService(client: rec.client(), mailto: 't@e.com'),
       );
-      await vm.search('   ');
+      await vm.loadForField('   ');
       expect(vm.state, ViewState.idle);
     });
 
     test('error on failure', () async {
       final vm = HomeViewModel(_failing(500));
-      await vm.search('ai');
+      await vm.loadForField('ai');
       expect(vm.state, ViewState.error);
     });
   });
 
   group('JournalsViewModel', () {
-    test('ranks journals by count desc and builds group_by URL', () async {
+    test('searches sources by name, journals first', () async {
       final rec = _Recorder();
       final vm = JournalsViewModel(
         OpenAlexService(client: rec.client(), mailto: 't@e.com'),
       );
-      await vm.load('ai');
+      await vm.search('nature');
 
       expect(vm.state, ViewState.success);
-      expect(vm.journals.map((j) => j.keyDisplayName), ['Nature', 'Science']);
-      expect(vm.journals.first.count, 30);
-      expect(vm.totalInTopJournals, 48);
+      expect(vm.sources.map((s) => s.displayName),
+          containsAll(['Nature', 'Nature Communications']));
+      expect(vm.sources.first.type, 'journal');
       expect(
         rec.uris.any(
           (u) =>
-              u.queryParameters['group_by'] == 'primary_location.source.id' &&
-              u.queryParameters['search'] == 'ai',
+              u.path == '/sources' && u.queryParameters['search'] == 'nature',
         ),
         isTrue,
       );
@@ -190,13 +223,13 @@ void main() {
       final vm = JournalsViewModel(
         OpenAlexService(client: rec.client(empty: true), mailto: 't@e.com'),
       );
-      await vm.load('zzz');
+      await vm.search('zzz');
       expect(vm.state, ViewState.empty);
     });
   });
 
   group('JournalDetailViewModel', () {
-    test('loads count + related works with a source filter', () async {
+    test('loads recent works grouped into volumes for a source', () async {
       final rec = _Recorder();
       final vm = JournalDetailViewModel(
         OpenAlexService(client: rec.client(), mailto: 't@e.com'),
@@ -204,12 +237,16 @@ void main() {
       await vm.load('https://openalex.org/S1');
 
       expect(vm.state, ViewState.success);
-      expect(vm.totalPublications, 4321);
-      expect(vm.relatedWorks, isNotEmpty);
-      expect(vm.averageTopCitations, 500);
+      expect(vm.recentWorkCount, 2);
+      expect(vm.volumes, isNotEmpty);
+      // No biblio.volume in the fixture → grouped by year, newest first.
+      expect(vm.volumes.first.year, 2022);
       expect(
         rec.uris.any(
-          (u) => u.queryParameters['filter'] == 'primary_location.source.id:S1',
+          (u) =>
+              u.queryParameters['filter'] ==
+                  'primary_location.source.id:S1' &&
+              u.queryParameters['sort'] == 'publication_date:desc',
         ),
         isTrue,
       );

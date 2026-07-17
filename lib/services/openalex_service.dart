@@ -23,6 +23,7 @@ class OpenAlexService {
 
   static const String _host = 'api.openalex.org';
   static const String _worksPath = '/works';
+  static const String _sourcesPath = '/sources';
   static const String _subfieldsPath = '/subfields';
   static const Duration _timeout = Duration(seconds: 15);
 
@@ -70,6 +71,53 @@ class OpenAlexService {
     String keyword, {
     List<String> filters = const [],
   }) => _groupBy(keyword, 'primary_location.source.id', filters);
+
+  /// Phase 13.3 (Journals): find publication venues by **name** via `/sources`.
+  Future<List<SourceHit>> searchSources(String name, {int perPage = 25}) async {
+    final query = name.trim();
+    if (query.isEmpty) return const [];
+    final json = await _getJson(
+      _apiUri(_sourcesPath, {'search': query, 'per-page': '$perPage'}),
+    );
+    final results = json['results'];
+    if (results is! List) {
+      throw const ParseException('Missing results array in /sources.');
+    }
+    return results
+        .whereType<Map<String, dynamic>>()
+        .map(SourceHit.fromJson)
+        .where((s) => s.id.isNotEmpty)
+        .toList();
+  }
+
+  /// Phase 13.3 (Journal detail): the most recent works of a source, newest
+  /// first, with enough breadth to group into recent volumes client-side.
+  Future<List<Work>> recentWorksBySource(
+    String sourceId, {
+    int perPage = 150,
+  }) => recentWorksByEntity(
+    'primary_location.source.id',
+    sourceId,
+    perPage: perPage,
+  );
+
+  /// Phase 13.2 (Home): the most recent publications for a topic/field, newest
+  /// first. No aggregation — a light, per-paper feed for the user's own field.
+  Future<List<Work>> recentWorksByTopic(
+    String topic, {
+    int perPage = 25,
+  }) async {
+    final query = topic.trim();
+    if (query.isEmpty) return const [];
+    final json = await _getJson(
+      _worksUri({
+        'search': query,
+        'sort': 'publication_date:desc',
+        'per-page': '$perPage',
+      }, const []),
+    );
+    return _parseWorks(json);
+  }
 
   /// FR-6: publication counts per author.
   Future<List<GroupByItem>> groupByAuthor(

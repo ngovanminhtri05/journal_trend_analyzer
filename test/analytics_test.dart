@@ -104,7 +104,7 @@ void main() {
       final analytics = _RecordingAnalytics();
       final vm = HomeViewModel(service, analytics: analytics);
 
-      await vm.search('  quantum computing  ');
+      await vm.loadForField('  quantum computing  ');
 
       expect(analytics.searchTopics, ['quantum computing']);
     });
@@ -117,7 +117,7 @@ void main() {
       final analytics = _RecordingAnalytics();
       final vm = HomeViewModel(service, analytics: analytics);
 
-      await vm.search('   ');
+      await vm.loadForField('   ');
 
       expect(analytics.searchTopics, isEmpty);
     });

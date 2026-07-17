@@ -2,12 +2,10 @@ import 'package:flutter/foundation.dart';
 
 import '../models/models.dart';
 import '../services/openalex_service.dart';
-import '../utils/utils.dart';
 import 'view_state.dart';
 
-/// Drives the Journals screen (Lab 03): ranks the publishing venues for a topic
-/// by publication count (`group_by=primary_location.source.id`). The View binds
-/// to this; the ranking/sorting lives here.
+/// Drives the Journals tab (Phase 13.3): find a publication venue by **name**
+/// (`/sources?search=`). The View binds to this; ordering lives here.
 class JournalsViewModel extends ChangeNotifier {
   JournalsViewModel(this._service);
 
@@ -17,15 +15,11 @@ class JournalsViewModel extends ChangeNotifier {
   String? errorMessage;
   String lastQuery = '';
 
-  /// Top journals for the topic, sorted by count descending.
-  List<GroupByItem> journals = const [];
+  /// Matching sources, journals first (then repositories/conferences).
+  List<SourceHit> sources = const [];
 
-  /// Combined publication count across the listed journals (a contribution
-  /// stat for the screen).
-  int get totalInTopJournals => journals.fold(0, (acc, j) => acc + j.count);
-
-  Future<void> load(String keyword) async {
-    final query = keyword.trim();
+  Future<void> search(String name) async {
+    final query = name.trim();
     if (query.isEmpty) return;
 
     lastQuery = query;
@@ -34,9 +28,13 @@ class JournalsViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final groups = await _service.groupByJournal(query);
-      journals = [...groups]..sort((a, b) => b.count.compareTo(a.count));
-      state = journals.isEmpty ? ViewState.empty : ViewState.success;
+      final hits = await _service.searchSources(query, perPage: 25);
+      // Surface journals before other source types, keeping API order within.
+      sources = [
+        ...hits.where((s) => s.type == 'journal'),
+        ...hits.where((s) => s.type != 'journal'),
+      ];
+      state = sources.isEmpty ? ViewState.empty : ViewState.success;
     } on OpenAlexException catch (e) {
       errorMessage = e.message;
       state = ViewState.error;
@@ -47,12 +45,12 @@ class JournalsViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> retry() => load(lastQuery);
+  Future<void> retry() => search(lastQuery);
 }
 
-/// Drives the Journal Detail screen (Lab 03): a journal's true publication
-/// count plus its most-cited publications (`filter=primary_location.source.id`).
-/// Citation figures are reported over the fetched top publications.
+/// Drives the Journal Detail screen (Phase 13.3): the venue's **recent volumes**
+/// (its recent works grouped by `biblio.volume`, year fallback) so the user can
+/// browse the articles inside each volume. Owns a scoped instance.
 class JournalDetailViewModel extends ChangeNotifier {
   JournalDetailViewModel(this._service);
 
@@ -62,38 +60,23 @@ class JournalDetailViewModel extends ChangeNotifier {
   String? errorMessage;
   String _lastSourceId = '';
 
-  /// True number of works published in this venue (`meta.count`).
-  int totalPublications = 0;
+  /// Recent volumes, newest first.
+  List<JournalVolume> volumes = const [];
 
-  /// The journal's most-cited publications (a fetched sample, cited-desc).
-  List<Work> relatedWorks = const [];
-
-  /// Total citations across the fetched top publications.
-  int get topCitations => relatedWorks.fold(0, (acc, w) => acc + w.citedByCount);
-
-  /// Mean citations across the fetched top publications.
-  double get averageTopCitations => averageCitations(relatedWorks);
+  /// Number of recent works fetched (a recent-output sample, not a global sum).
+  int recentWorkCount = 0;
 
   Future<void> load(String sourceId) async {
-    final id = shortOpenAlexId(sourceId);
-    if (id.isEmpty) return;
-
     _lastSourceId = sourceId;
     state = ViewState.loading;
     errorMessage = null;
     notifyListeners();
 
     try {
-      final filter = ['primary_location.source.id:$id'];
-      final results = await Future.wait([
-        _service.getCountByFilter(filter),
-        _service.getWorksByFilter(filter, perPage: 25),
-      ]);
-      totalPublications = results[0] as int;
-      relatedWorks = results[1] as List<Work>;
-      state = (totalPublications == 0 && relatedWorks.isEmpty)
-          ? ViewState.empty
-          : ViewState.success;
+      final works = await _service.recentWorksBySource(sourceId, perPage: 150);
+      recentWorkCount = works.length;
+      volumes = groupWorksIntoVolumes(works);
+      state = volumes.isEmpty ? ViewState.empty : ViewState.success;
     } on OpenAlexException catch (e) {
       errorMessage = e.message;
       state = ViewState.error;

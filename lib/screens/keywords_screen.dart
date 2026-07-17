@@ -23,7 +23,7 @@ class KeywordsScreen extends StatelessWidget {
     return Column(
       children: [
         TopicSearchBar(
-          hintText: 'Frequent keywords for a topic (e.g. Genomics)',
+          hintText: 'Analyze a research keyword (e.g. Genomics)',
           onSubmit: (q) => context.read<KeywordsViewModel>().load(q),
         ),
         Expanded(child: _buildBody(context, vm)),
@@ -222,7 +222,10 @@ class KeywordDetailScreen extends StatelessWidget {
               limit: 10,
               onItemTap: (item) => Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (_) => JournalDetailScreen(journal: item),
+                  builder: (_) => JournalDetailScreen(
+                    sourceId: item.key,
+                    title: item.keyDisplayName,
+                  ),
                 ),
               ),
             ),

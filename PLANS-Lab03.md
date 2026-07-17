@@ -129,5 +129,21 @@ Lab 03 changes the product significantly:
 
 ---
 
+## Phase 13: Tab redesign per instructor (2026-07-17)
+
+Instructor re-scope of the 4 tabs. Decisions: Home field = **user-chosen, stored locally**;
+Firebase demos (Remote Config/Notifications) **kept** in a small Profile section (rubric safety).
+
+| Task | 内容 | DoD | Status |
+|------|------|-----|--------|
+| 13.1 | `ResearchFieldProvider` — user picks/edits their research field, persisted (shared_preferences) | Field survives restart; editable on Profile | cc:done |
+| 13.2 | **Home**: light overview of **recent publications in the user's field** — no OpenAlex sums/aggregates | Field prompt if unset; recent papers list; tap→detail; no totals | cc:done — `HomeViewModel.loadForField` + `recentWorksByTopic`; export kept (recent-papers PDF). |
+| 13.3 | **Journals**: search a journal **by name** (`/sources?search=`) → detail → **recent volumes** → **articles in a volume** | Name search; volumes grouped (biblio.volume, year fallback); articles per volume | cc:done — `searchSources` + `recentWorksBySource` + `groupWorksIntoVolumes`; ExpansionTile per volume. |
+| 13.4 | **Keywords**: enter/search a keyword → its analysis (reuse trend/authors/journals/works) | Direct keyword → analysis | cc:done — hint reworded; existing analysis flow retained. |
+| 13.5 | **Profile**: User + **Bookmark list** + Crashlytics test button; keep Remote Config/Notifications in a small section | Bookmarks shown; field editor; Crashlytics; FB demos retained | cc:done — `_BookmarksSection` + `_ResearchFieldCard`; FB demos under a "Firebase demos" section. |
+| 13.6 | Update unit tests + Patrol E2E to the new UI | analyze clean; unit tests pass; Patrol updated | cc:wip — **`flutter analyze` clean; 121 unit/widget tests pass.** Patrol E2E still asserts the OLD UI (topic-search Home, "Top journals", etc.) → **needs rewrite + on-device rerun** for the new flows. |
+
+---
+
 ## Status legend
 `cc:todo` not started · `cc:wip` in progress · `cc:done` completed · `blocked` (reason required)

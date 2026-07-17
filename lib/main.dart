@@ -165,6 +165,8 @@ class _JournalTrendAppState extends State<JournalTrendApp> {
         ChangeNotifierProvider(
           create: (_) => BookmarkProvider(_bookmarkService),
         ),
+        // Phase 13.1: the user's chosen research field (drives Home).
+        ChangeNotifierProvider(create: (_) => ResearchFieldProvider()..load()),
         // Lab 03 tab ViewModels (Home / Journals / Keywords).
         ChangeNotifierProvider(
           create: (_) =>

@@ -3,9 +3,13 @@ import 'package:provider/provider.dart';
 
 import '../firebase/crash_reporter_service.dart';
 import '../firebase/remote_config_service.dart';
+import '../models/models.dart';
 import '../theme/app_theme.dart';
 import '../viewmodels/auth_viewmodel.dart';
+import '../viewmodels/bookmark_provider.dart';
 import '../viewmodels/notifications_viewmodel.dart';
+import '../viewmodels/research_field_provider.dart';
+import 'detail_screen.dart';
 import 'notifications_screen.dart';
 
 /// Profile tab (Lab 03, task 8.1).
@@ -80,12 +84,23 @@ class ProfileScreen extends StatelessWidget {
             ],
           ),
         ),
+        const SizedBox(height: 16),
+        const _ResearchFieldCard(),
+        const SizedBox(height: 16),
+        const _BookmarksSection(),
+        const SizedBox(height: 16),
+        const _CrashlyticsCard(),
         const SizedBox(height: 24),
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 4),
+          child: Text(
+            'Firebase demos',
+            style: theme.textTheme.labelSmall?.copyWith(color: AppTheme.muted),
+          ),
+        ),
         const _NotificationsTile(),
         const SizedBox(height: 16),
         const _RemoteConfigCard(),
-        const SizedBox(height: 16),
-        const _CrashlyticsCard(),
         const SizedBox(height: 24),
         FilledButton.icon(
           onPressed: vm.signOut,
@@ -229,6 +244,171 @@ class _CrashlyticsCard extends StatelessWidget {
     );
     if (confirmed ?? false) reporter.forceCrash();
   }
+}
+
+/// Research field editor (Phase 13.1): shows the user's chosen field and opens
+/// a dialog to set/change it. Drives Home's recent-publications feed.
+class _ResearchFieldCard extends StatelessWidget {
+  const _ResearchFieldCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.watch<ResearchFieldProvider?>();
+    if (provider == null) return const SizedBox.shrink();
+    final field = provider.field;
+    final hasField = field != null && field.isNotEmpty;
+    return Card(
+      child: ListTile(
+        leading: const Icon(Icons.interests_outlined),
+        title: const Text('Research field'),
+        subtitle: Text(hasField ? field : 'Not set — tap to choose'),
+        trailing: const Icon(Icons.edit_outlined),
+        onTap: () async {
+          final value = await _promptResearchField(
+            context,
+            initial: field ?? '',
+          );
+          if (value != null) await provider.setField(value);
+        },
+      ),
+    );
+  }
+}
+
+/// Bookmark list (Phase 13.5): the saved works / journals / authors, read from
+/// [BookmarkProvider]. Works re-open in the detail screen; any item can be removed.
+class _BookmarksSection extends StatelessWidget {
+  const _BookmarksSection();
+
+  @override
+  Widget build(BuildContext context) {
+    final bookmarks = context.watch<BookmarkProvider?>();
+    if (bookmarks == null) return const SizedBox.shrink();
+    final theme = Theme.of(context);
+    return Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: Row(
+              children: [
+                const Icon(Icons.bookmarks_outlined, size: 18),
+                const SizedBox(width: 8),
+                Text('Bookmarks', style: theme.textTheme.titleSmall),
+                const Spacer(),
+                if (bookmarks.ready && bookmarks.bookmarks.isNotEmpty)
+                  Text(
+                    '${bookmarks.bookmarks.length}',
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: AppTheme.muted,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          if (!bookmarks.ready)
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text('Loading…'),
+            )
+          else if (bookmarks.bookmarks.isEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: Text(
+                'No bookmarks yet. Tap the bookmark icon on a publication, '
+                'journal or author to save it here.',
+                style: theme.textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+              ),
+            )
+          else
+            for (final b in bookmarks.bookmarks) _BookmarkTile(bookmark: b),
+        ],
+      ),
+    );
+  }
+}
+
+/// One saved bookmark row: type icon, name, a short subtitle, and a remove
+/// action. Tapping a saved publication re-opens its detail (offline-safe).
+class _BookmarkTile extends StatelessWidget {
+  const _BookmarkTile({required this.bookmark});
+
+  final Bookmark bookmark;
+
+  IconData get _icon => switch (bookmark.type) {
+    BookmarkType.work => Icons.article_outlined,
+    BookmarkType.journal => Icons.menu_book_outlined,
+    BookmarkType.author => Icons.person_outline,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final subtitle = <String>[
+      bookmark.type.name,
+      if (bookmark.publicationYear != null) '${bookmark.publicationYear}',
+      if (bookmark.journalName != null && bookmark.journalName!.isNotEmpty)
+        bookmark.journalName!,
+      if (bookmark.worksCount != null) '${bookmark.worksCount} works',
+    ].join(' · ');
+    return ListTile(
+      dense: true,
+      leading: Icon(_icon, size: 20),
+      title: Text(
+        bookmark.displayName,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+      ),
+      subtitle: Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
+      trailing: IconButton(
+        icon: const Icon(Icons.close, size: 18),
+        tooltip: 'Remove',
+        onPressed: () =>
+            context.read<BookmarkProvider>().remove(bookmark.type, bookmark.id),
+      ),
+      onTap: bookmark.type == BookmarkType.work
+          ? () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => DetailScreen(work: bookmark.toWork()),
+              ),
+            )
+          : null,
+    );
+  }
+}
+
+/// Dialog asking the user to type a research field. Returns the trimmed value,
+/// or null when cancelled / empty.
+Future<String?> _promptResearchField(
+  BuildContext context, {
+  String initial = '',
+}) {
+  final controller = TextEditingController(text: initial);
+  return showDialog<String>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Your research field'),
+      content: TextField(
+        controller: controller,
+        autofocus: true,
+        textInputAction: TextInputAction.done,
+        decoration: const InputDecoration(
+          hintText: 'e.g. Machine Learning, Genomics',
+        ),
+        onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+          child: const Text('Save'),
+        ),
+      ],
+    ),
+  ).then((v) => (v == null || v.isEmpty) ? null : v);
 }
 
 /// Circular account picture, falling back to the account initial when there is

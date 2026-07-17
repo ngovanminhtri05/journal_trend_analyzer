@@ -109,6 +109,76 @@ Future<Uint8List> buildDashboardReportPdf({
   return doc.save();
 }
 
+/// Builds a "recent publications in my field" PDF (Phase 13.2) — the light Home
+/// export. Lists each recent paper (title / authors / year / venue) with no
+/// OpenAlex aggregate totals. Pure and UI-agnostic like [buildDashboardReportPdf].
+Future<Uint8List> buildRecentPapersReportPdf({
+  required String field,
+  required List<Work> works,
+  DateTime? generatedAt,
+}) async {
+  final doc = pw.Document();
+  final now = generatedAt ?? DateTime.now();
+  const na = 'N/A';
+
+  final rows = works
+      .take(40)
+      .map(
+        (w) => [
+          _ascii(w.title) ?? na,
+          _ascii(w.authorNames) ?? na,
+          w.publicationYear?.toString() ?? na,
+          _ascii(w.journalName) ?? na,
+        ],
+      )
+      .toList();
+
+  doc.addPage(
+    pw.MultiPage(
+      pageTheme: pw.PageTheme(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(32),
+      ),
+      build: (context) => [
+        pw.Header(
+          level: 0,
+          child: pw.Text(
+            'Journal Trend Analyzer - Recent Publications',
+            style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold),
+          ),
+        ),
+        pw.Text(
+          'Field: ${_ascii(field) ?? na}',
+          style: const pw.TextStyle(fontSize: 14),
+        ),
+        pw.SizedBox(height: 4),
+        pw.Text(
+          'Generated: ${_formatDate(now)}',
+          style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
+        ),
+        pw.SizedBox(height: 20),
+        if (rows.isEmpty)
+          pw.Text('No recent publications found.')
+        else
+          pw.TableHelper.fromTextArray(
+            headers: const ['Title', 'Authors', 'Year', 'Venue'],
+            data: rows,
+            headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+            cellAlignment: pw.Alignment.centerLeft,
+            columnWidths: {
+              0: const pw.FlexColumnWidth(3),
+              1: const pw.FlexColumnWidth(2),
+              2: const pw.FlexColumnWidth(0.7),
+              3: const pw.FlexColumnWidth(1.6),
+            },
+          ),
+      ],
+    ),
+  );
+
+  return doc.save();
+}
+
 String _titleCase(String value) =>
     value.isEmpty ? value : value[0].toUpperCase() + value.substring(1);
 

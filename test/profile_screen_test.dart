@@ -110,6 +110,9 @@ void main() {
       );
       await tester.pump();
 
+      // Sign out sits at the bottom of the scrolling profile list.
+      await tester.ensureVisible(find.widgetWithText(FilledButton, 'Sign out'));
+      await tester.pump();
       await tester.tap(find.widgetWithText(FilledButton, 'Sign out'));
       await tester.pump();
 

@@ -7,22 +7,39 @@ import '../viewmodels/viewmodels.dart';
 import '../widgets/widgets.dart';
 import 'detail_screen.dart';
 
-/// Home tab (Lab 03): a topic search that fans out into an overview dashboard —
-/// the trend chart, five headline metrics, and the most-influential paper
-/// (tappable to its detail). All logic lives in [HomeViewModel]; this View only
-/// renders its state.
+/// Home tab (Phase 13.2): a light overview of the **most recent publications in
+/// the user's own research field**. The field is chosen on the Profile tab and
+/// stored locally ([ResearchFieldProvider]); there are no OpenAlex aggregate
+/// totals here — just recent work to skim. All logic lives in [HomeViewModel].
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final fieldProvider = context.watch<ResearchFieldProvider>();
     final vm = context.watch<HomeViewModel>();
+
+    if (!fieldProvider.ready) {
+      return const LoadingView(message: 'Loading…');
+    }
+
+    // Keep the ViewModel's feed in sync with the chosen field.
+    final chosen = fieldProvider.field ?? '';
+    if (chosen != vm.field) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (chosen != vm.field) vm.loadForField(chosen);
+      });
+    }
+
+    if (!fieldProvider.isSet) {
+      return _FieldPrompt(onSave: fieldProvider.setField);
+    }
 
     return Column(
       children: [
-        TopicSearchBar(
-          hintText: 'Search a research topic (e.g. Machine Learning)',
-          onSubmit: (q) => context.read<HomeViewModel>().search(q),
+        _FieldHeader(
+          field: chosen,
+          onEdit: () => _editField(context, fieldProvider, chosen),
         ),
         Expanded(child: _buildBody(context, vm)),
       ],
@@ -32,12 +49,8 @@ class HomeScreen extends StatelessWidget {
   Widget _buildBody(BuildContext context, HomeViewModel vm) {
     switch (vm.state) {
       case ViewState.idle:
-        return const EmptyView(
-          icon: Icons.insights_outlined,
-          message: 'Enter a topic above to see a research overview.',
-        );
       case ViewState.loading:
-        return const LoadingView(message: 'Building overview…');
+        return const LoadingView(message: 'Loading recent publications…');
       case ViewState.error:
         return ErrorView(
           message: vm.errorMessage ?? 'Something went wrong.',
@@ -45,120 +58,193 @@ class HomeScreen extends StatelessWidget {
         );
       case ViewState.empty:
         return EmptyView(
-          message: 'No publications found for "${vm.lastQuery}".',
+          message: 'No recent publications found for "${vm.field}".',
         );
       case ViewState.success:
-        return _Overview(vm: vm);
+        return _RecentFeed(vm: vm);
     }
+  }
+
+  Future<void> _editField(
+    BuildContext context,
+    ResearchFieldProvider provider,
+    String current,
+  ) async {
+    final value = await _promptForField(context, initial: current);
+    if (value != null) await provider.setField(value);
   }
 }
 
-class _Overview extends StatelessWidget {
-  const _Overview({required this.vm});
+/// Recent-publications list for the chosen field, with the PDF export action.
+class _RecentFeed extends StatelessWidget {
+  const _RecentFeed({required this.vm});
 
   final HomeViewModel vm;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final s = vm.summary!;
-    final trend = vm.trendClassification;
-
-    final metrics = <_Metric>[
-      _Metric(
-        Icons.article_outlined,
-        'Total publications',
-        '${s.totalPublications}',
-      ),
-      _Metric(
-        Icons.format_quote_outlined,
-        'Avg. citations',
-        s.averageCitations.toStringAsFixed(1),
-      ),
-      _Metric(
-        Icons.calendar_today_outlined,
-        'Most active year',
-        s.mostActiveYear?.toString() ?? '—',
-      ),
-      _Metric(Icons.menu_book_outlined, 'Top journal', s.topJournal ?? '—'),
-      _Metric(Icons.person_outline, 'Top author', s.topAuthor ?? '—'),
-    ];
-
     return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 12),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
           child: Row(
             children: [
               Expanded(
-                child: Text(vm.lastQuery, style: theme.textTheme.titleMedium),
+                child: Text(
+                  'Recent publications',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
               ),
-              if (trend != null) TrendBadge(classification: trend),
+              if (vm.canExport || vm.isExporting)
+                TextButton.icon(
+                  onPressed: vm.isExporting
+                      ? null
+                      : () => _exportReport(context, vm),
+                  icon: vm.isExporting
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.picture_as_pdf_outlined, size: 18),
+                  label: Text(vm.isExporting ? 'Exporting…' : 'Export'),
+                ),
             ],
           ),
         ),
-        if (vm.canExport || vm.isExporting)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: FilledButton.tonalIcon(
-                onPressed: vm.isExporting
-                    ? null
-                    : () => _exportReport(context, vm),
-                icon: vm.isExporting
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.picture_as_pdf_outlined),
-                label: Text(
-                  vm.isExporting ? 'Exporting…' : 'Export PDF report',
-                ),
-              ),
-            ),
-          ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-          child: Text(
-            'Publications over time',
-            style: theme.textTheme.titleSmall,
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: YearBarChart(data: vm.yearCounts),
-        ),
-        const SizedBox(height: 8),
-        _MetricsGrid(metrics: metrics),
-        if (s.mostInfluential != null) ...[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-            child: Text(
-              'Most influential publication',
-              style: theme.textTheme.titleSmall,
-            ),
-          ),
+        for (final work in vm.recentWorks)
           PaperCard(
-            work: s.mostInfluential!,
+            work: work,
             onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => DetailScreen(work: s.mostInfluential!),
-              ),
+              MaterialPageRoute(builder: (_) => DetailScreen(work: work)),
             ),
           ),
-        ],
         const SizedBox(height: 16),
       ],
     );
   }
 }
 
-/// Builds the dashboard PDF, opens the OS share sheet for the saved file, and —
-/// when the cloud upload succeeded — shows the Storage download URL too. The
-/// signed-in uid (from the auth gate) scopes the Storage path.
+/// Shown when no research field is set yet: a short prompt + an inline input.
+class _FieldPrompt extends StatelessWidget {
+  const _FieldPrompt({required this.onSave});
+
+  final Future<void> Function(String) onSave;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.interests_outlined, size: 64, color: theme.colorScheme.outline),
+            const SizedBox(height: 16),
+            Text(
+              'Set your research field',
+              style: theme.textTheme.titleLarge,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Home shows the most recent publications in the field you '
+              'research. You can change it any time from Profile.',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 20),
+            FilledButton.icon(
+              onPressed: () async {
+                final value = await _promptForField(context);
+                if (value != null) await onSave(value);
+              },
+              icon: const Icon(Icons.add),
+              label: const Text('Choose a field'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Header shown once a field is chosen: the field name + an edit affordance.
+class _FieldHeader extends StatelessWidget {
+  const _FieldHeader({required this.field, required this.onEdit});
+
+  final String field;
+  final VoidCallback onEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 8, 0),
+      child: Row(
+        children: [
+          Icon(Icons.interests_outlined, size: 18, color: theme.colorScheme.primary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Your research field', style: theme.textTheme.labelSmall),
+                Text(
+                  field,
+                  style: theme.textTheme.titleMedium,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: 'Change field',
+            icon: const Icon(Icons.edit_outlined, size: 20),
+            onPressed: onEdit,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Shared dialog that asks the user to type a research field. Returns the
+/// trimmed value, or null when cancelled / empty.
+Future<String?> _promptForField(BuildContext context, {String initial = ''}) {
+  final controller = TextEditingController(text: initial);
+  return showDialog<String>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Your research field'),
+      content: TextField(
+        controller: controller,
+        autofocus: true,
+        textInputAction: TextInputAction.done,
+        decoration: const InputDecoration(
+          hintText: 'e.g. Machine Learning, Genomics',
+        ),
+        onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+          child: const Text('Save'),
+        ),
+      ],
+    ),
+  ).then((v) => (v == null || v.isEmpty) ? null : v);
+}
+
+/// Builds the field report PDF, opens the OS share sheet for the saved file,
+/// and — when the cloud upload succeeded — shows the Storage download URL.
 Future<void> _exportReport(BuildContext context, HomeViewModel vm) async {
   final uid = context.read<AuthViewModel?>()?.user?.uid ?? 'anonymous';
   final messenger = ScaffoldMessenger.of(context);
@@ -170,19 +256,17 @@ Future<void> _exportReport(BuildContext context, HomeViewModel vm) async {
     return;
   }
 
-  // Share the locally-saved PDF (works with no backend / no billing).
   final path = vm.reportFilePath;
   if (path != null) {
     await SharePlus.instance.share(
       ShareParams(
         files: [XFile(path)],
-        text: 'Journal Trend Analyzer report — ${vm.lastQuery}',
+        text: 'Recent publications in ${vm.field}',
       ),
     );
   }
   if (!context.mounted) return;
 
-  // If Storage was enabled, also surface the download URL.
   final url = vm.reportUrl;
   if (url != null) {
     await showDialog<void>(
@@ -214,42 +298,4 @@ Future<void> _exportReport(BuildContext context, HomeViewModel vm) async {
       ),
     );
   }
-}
-
-/// Two-column grid of [StatCard]s sized from the available width.
-class _MetricsGrid extends StatelessWidget {
-  const _MetricsGrid({required this.metrics});
-
-  final List<_Metric> metrics;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          const spacing = 8.0;
-          final cardWidth = (constraints.maxWidth - spacing) / 2;
-          return Wrap(
-            spacing: spacing,
-            runSpacing: spacing,
-            children: [
-              for (final m in metrics)
-                SizedBox(
-                  width: cardWidth,
-                  child: StatCard(icon: m.icon, label: m.label, value: m.value),
-                ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _Metric {
-  const _Metric(this.icon, this.label, this.value);
-  final IconData icon;
-  final String label;
-  final String value;
 }
