@@ -104,6 +104,21 @@ void main() {
       expect(huge!.category, TrendCategory.emerging);
     });
 
+    test('excludes the incomplete current year (no false "declining")', () {
+      // Strong rise 2021→2024, then a low partial current year (2025) that would
+      // drag the slope negative if counted. It must be dropped.
+      final c = classifyTrend([
+        _yb(2021, 100),
+        _yb(2022, 200),
+        _yb(2023, 300),
+        _yb(2024, 400),
+        _yb(2025, 40), // current year, still being indexed → excluded
+      ], currentYear: 2025);
+      expect(c, isNotNull);
+      expect(c!.toYear, 2024); // 2025 not included
+      expect(c.category, TrendCategory.emerging); // not declining
+    });
+
     test('uses only the most recent window of years', () {
       // Old declining block, then a recent rise — window=3 should see only the
       // recent rise and classify it emerging.

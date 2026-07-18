@@ -69,22 +69,27 @@ TrendClassification? classifyTrend(
   List<GroupByItem> yearBuckets, {
   int window = 6,
   double flatThreshold = 0.05,
+  int? currentYear,
 }) {
+  // The current calendar year (and anything later) is still being indexed by
+  // OpenAlex, so its count reads artificially low — including it drags the slope
+  // down and falsely reports hot topics as "Declining". Exclude it so the
+  // verdict is computed only over fully-indexed years. [currentYear] is
+  // injectable for tests; defaults to the real current year.
+  final cutoff = currentYear ?? DateTime.now().year;
+
   // Parse "publication_year" buckets into year → count, dropping non-numeric
-  // keys (the group_by response is ordered by count, not year).
+  // keys (the group_by response is ordered by count, not year) and the
+  // incomplete current/future years.
   final all = <int, int>{};
   for (final bucket in yearBuckets) {
     final year = int.tryParse(bucket.key);
-    if (year != null) all[year] = bucket.count;
+    if (year != null && year < cutoff) all[year] = bucket.count;
   }
   if (all.length < 2) return null;
 
   // Keep only the most recent [window] years, so the verdict reflects the
   // current trajectory rather than the topic's entire history.
-  //
-  // Note: the latest calendar year is often still being indexed by OpenAlex and
-  // can read artificially low; we keep it for simplicity, but that is the main
-  // source of a falsely "Declining" verdict on otherwise hot topics.
   final years = all.keys.toList()..sort();
   final recent = years.length <= window
       ? years
