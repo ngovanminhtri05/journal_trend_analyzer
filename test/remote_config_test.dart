@@ -5,6 +5,8 @@ import 'package:mocktail/mocktail.dart';
 
 class _MockRemoteConfig extends Mock implements FirebaseRemoteConfig {}
 
+class _MockValue extends Mock implements RemoteConfigValue {}
+
 void main() {
   setUpAll(() {
     registerFallbackValue(
@@ -37,6 +39,11 @@ void main() {
       rc = _MockRemoteConfig();
       when(() => rc.setConfigSettings(any())).thenAnswer((_) async {});
       when(() => rc.setDefaults(any())).thenAnswer((_) async {});
+      // Stubs for the diagnostics added to initialize().
+      final value = _MockValue();
+      when(() => value.source).thenReturn(ValueSource.valueRemote);
+      when(() => rc.getValue(any())).thenReturn(value);
+      when(() => rc.lastFetchStatus).thenReturn(RemoteConfigFetchStatus.success);
     });
 
     test('caches the fetched server values', () async {

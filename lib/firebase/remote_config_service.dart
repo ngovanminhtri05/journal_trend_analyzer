@@ -1,5 +1,4 @@
 import 'package:firebase_remote_config/firebase_remote_config.dart';
-import 'package:flutter/foundation.dart' show kDebugMode;
 
 /// App-wide tunables sourced from Firebase Remote Config (Lab 03 task 9.4).
 ///
@@ -12,6 +11,10 @@ abstract interface class RemoteConfigApi {
 
   /// Max keywords shown in the Keywords ranked list.
   int get maxKeywords;
+
+  /// Human-readable diagnostic of where the values came from and how the last
+  /// fetch went (shown on the Profile card so the demo is verifiable).
+  String get statusLabel;
 }
 
 /// Firebase-backed [RemoteConfigApi].
@@ -33,12 +36,16 @@ class RemoteConfigService implements RemoteConfigApi {
 
   int _maxJournals = defaultMaxJournals;
   int _maxKeywords = defaultMaxKeywords;
+  String _statusLabel = 'Not fetched yet';
 
   @override
   int get maxJournals => _maxJournals;
 
   @override
   int get maxKeywords => _maxKeywords;
+
+  @override
+  String get statusLabel => _statusLabel;
 
   /// Loads defaults, fetches + activates remote values, and caches the result.
   /// Any fetch failure (offline, etc.) leaves the in-code defaults in place.
@@ -47,24 +54,37 @@ class RemoteConfigService implements RemoteConfigApi {
     await rc.setConfigSettings(
       RemoteConfigSettings(
         fetchTimeout: const Duration(seconds: 10),
-        // Fetch fresh on every launch in debug (so server changes show up
-        // immediately during development/demo); throttle in release.
-        minimumFetchInterval: kDebugMode
-            ? Duration.zero
-            : const Duration(hours: 1),
+        // Fetch fresh on every launch (lab/demo): a change published in the
+        // Firebase console shows up the next time the app is (re)started, in
+        // both debug and release. Raise this in a real production app.
+        minimumFetchInterval: Duration.zero,
       ),
     );
     await rc.setDefaults(const {
       keyMaxJournals: defaultMaxJournals,
       keyMaxKeywords: defaultMaxKeywords,
     });
+
+    var fetchStatus = 'no fetch';
     try {
       await rc.fetchAndActivate();
+      fetchStatus = rc.lastFetchStatus.name; // success / throttle / failure
     } catch (_) {
       // Keep defaults on failure.
+      fetchStatus = rc.lastFetchStatus.name;
     }
+
     _maxJournals = rc.getInt(keyMaxJournals);
     _maxKeywords = rc.getInt(keyMaxKeywords);
+
+    // Diagnose where the applied value came from: a `remote` source means the
+    // console value was fetched + activated; `default` means it fell back to the
+    // in-code default (param not published, fetch failed, or wrong key).
+    final source = rc.getValue(keyMaxJournals).source;
+    final fromServer = source == ValueSource.valueRemote;
+    _statusLabel = fromServer
+        ? 'From server · fetch: $fetchStatus'
+        : 'In-code defaults · fetch: $fetchStatus';
   }
 }
 
@@ -79,4 +99,7 @@ class StaticRemoteConfig implements RemoteConfigApi {
   final int maxJournals;
   @override
   final int maxKeywords;
+
+  @override
+  String get statusLabel => 'Static (test defaults)';
 }
