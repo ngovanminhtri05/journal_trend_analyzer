@@ -8,13 +8,13 @@ import '../services/report_builder.dart';
 import '../services/report_file_saver.dart';
 import 'view_state.dart';
 
-/// Drives the Home overview (Phase 13.2).
+/// Drives the Home discovery feed (Phase 14.3).
 ///
-/// Instead of OpenAlex aggregate totals, Home shows a light, per-paper feed of
-/// the **most recent publications in the user's own research field** (chosen on
-/// the Profile tab). No `group_by`, no counts — just recent work to skim. The
-/// PDF export (Storage/Analytics demo, task 8.3) is kept, now producing a
-/// "recent publications" report from this list.
+/// A cursor-paginated feed of works with a [sort] toggle (rising / newest /
+/// top-cited), an optional free-text [query] (relevance search) and an optional
+/// [subfieldId] filter. No OpenAlex aggregate totals. The PDF export
+/// (Storage/Analytics demo, task 8.3) is kept, producing a report from the
+/// current feed.
 class HomeViewModel extends ChangeNotifier {
   HomeViewModel(
     this._service, {
@@ -33,42 +33,55 @@ class HomeViewModel extends ChangeNotifier {
   ViewState state = ViewState.idle;
   String? errorMessage;
 
-  /// Optional field filter (mirrors the user's chosen research field). Empty
-  /// means global trending across all fields.
-  String field = '';
+  /// Current ordering of the feed.
+  WorkSort sort = WorkSort.rising;
 
-  /// Trending publications (recent + highly cited), optionally scoped to [field].
-  List<Work> recentWorks = const [];
+  /// Free-text search term (empty = browse feed).
+  String query = '';
 
-  /// PDF-report export state (task 8.3). [reportFilePath] is the locally-saved
-  /// PDF; [reportUrl] is the Storage download URL when the best-effort upload
-  /// succeeds; [exportError] is a user-facing failure message.
+  /// Selected subfield filter (short OpenAlex id), or null when unfiltered.
+  String? subfieldId;
+
+  /// The loaded page(s) of works.
+  List<Work> works = const [];
+
+  String? _nextCursor;
+  bool loadingMore = false;
+
+  /// Whether another page can be loaded.
+  bool get hasMore => _nextCursor != null;
+
+  /// PDF-report export state (task 8.3).
   bool isExporting = false;
   String? reportFilePath;
   String? reportUrl;
   String? exportError;
 
-  /// Whether a report can be exported right now.
-  bool get canExport => state == ViewState.success && recentWorks.isNotEmpty;
+  bool get canExport => state == ViewState.success && works.isNotEmpty;
 
-  /// Loads the trending publications feed. With no [field] it shows global
-  /// trending; with a field it scopes the trend to that topic. Always loads
-  /// (there is no "pick a field first" gate) so Home shows papers on open.
-  Future<void> load({String field = ''}) async {
-    this.field = field.trim();
+  /// Recency window (days) for the browse feed: a longer window for "top cited".
+  int get _windowDays => sort == WorkSort.topCited ? 730 : 365;
+
+  /// Loads the first page for the current [sort] / [query] / [subfieldId].
+  Future<void> load() async {
     state = ViewState.loading;
     errorMessage = null;
+    works = const [];
+    _nextCursor = null;
     notifyListeners();
 
-    // Analytics: only log a topic search when the feed is field-scoped.
-    if (this.field.isNotEmpty) _analytics?.logSearchTopic(this.field).ignore();
+    // Analytics: log a topic search when the feed is a query search.
+    if (query.isNotEmpty) _analytics?.logSearchTopic(query).ignore();
 
     try {
-      final works = await _service.trendingWorks(
-        field: this.field.isEmpty ? null : this.field,
-        perPage: 25,
+      final page = await _service.discoverWorks(
+        query: query.isEmpty ? null : query,
+        subfieldId: subfieldId,
+        sort: sort,
+        windowDays: _windowDays,
       );
-      recentWorks = works;
+      works = page.works;
+      _nextCursor = page.nextCursor;
       state = works.isEmpty ? ViewState.empty : ViewState.success;
     } on OpenAlexException catch (e) {
       errorMessage = e.message;
@@ -80,11 +93,64 @@ class HomeViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> retry() => load(field: field);
+  Future<void> refresh() => load();
 
-  /// Builds a "recent publications in my field" PDF, saves it locally (share
-  /// sheet, no backend needed) and best-effort uploads it to Firebase Storage
-  /// under [uid]. Fires the `export_pdf` analytics event. Task 8.3 / Phase 13.2.
+  Future<void> retry() => load();
+
+  Future<void> setSort(WorkSort value) async {
+    if (value == sort) return;
+    sort = value;
+    await load();
+  }
+
+  Future<void> search(String value) async {
+    final q = value.trim();
+    if (q == query && state != ViewState.idle) return;
+    query = q;
+    await load();
+  }
+
+  Future<void> clearSearch() async {
+    if (query.isEmpty) return;
+    query = '';
+    await load();
+  }
+
+  Future<void> setSubfield(String? id) async {
+    final next = (id == null || id.isEmpty) ? null : id;
+    if (next == subfieldId && state != ViewState.idle) return;
+    subfieldId = next;
+    await load();
+  }
+
+  /// Appends the next page, threading the OpenAlex cursor. No-op when a load is
+  /// in flight, when the feed is exhausted, or before the first page.
+  Future<void> loadMore() async {
+    if (loadingMore || !hasMore || state != ViewState.success) return;
+    loadingMore = true;
+    notifyListeners();
+
+    try {
+      final page = await _service.discoverWorks(
+        query: query.isEmpty ? null : query,
+        subfieldId: subfieldId,
+        sort: sort,
+        windowDays: _windowDays,
+        cursor: _nextCursor,
+      );
+      works = [...works, ...page.works];
+      _nextCursor = page.nextCursor;
+    } catch (_) {
+      // Keep the pages already loaded; the next scroll can retry.
+    }
+
+    loadingMore = false;
+    notifyListeners();
+  }
+
+  /// Builds a report PDF of the current feed, saves it locally (share sheet, no
+  /// backend needed) and best-effort uploads it to Firebase Storage under [uid].
+  /// Fires the `export_pdf` analytics event. Task 8.3.
   Future<void> exportReport({required String uid}) async {
     if (!canExport || isExporting) return;
 
@@ -95,20 +161,16 @@ class HomeViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final bytes = await buildRecentPapersReportPdf(
-        field: field,
-        works: recentWorks,
-      );
-      final slug = field.isEmpty
-          ? 'report'
-          : field.replaceAll(RegExp(r'[^A-Za-z0-9]+'), '_');
+      final label = query.isEmpty ? 'Discover feed' : query;
+      final bytes = await buildRecentPapersReportPdf(field: label, works: works);
+      final slug = query.isEmpty
+          ? 'discover'
+          : query.replaceAll(RegExp(r'[^A-Za-z0-9]+'), '_');
       final fileName =
           'report_${slug}_${DateTime.now().millisecondsSinceEpoch}.pdf';
 
-      // Primary path: save locally for the OS share sheet (no billing needed).
       reportFilePath = await _saveReport(bytes, fileName);
 
-      // Bonus path: upload to Storage if configured. Failures never fail export.
       final storage = _storage;
       if (storage != null) {
         try {
@@ -122,7 +184,7 @@ class HomeViewModel extends ChangeNotifier {
         }
       }
 
-      _analytics?.logExportPdf(field).ignore();
+      _analytics?.logExportPdf(label).ignore();
     } catch (_) {
       exportError = 'Failed to export the report. Please try again.';
     }

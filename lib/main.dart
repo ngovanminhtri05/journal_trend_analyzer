@@ -165,8 +165,10 @@ class _JournalTrendAppState extends State<JournalTrendApp> {
         ChangeNotifierProvider(
           create: (_) => BookmarkProvider(_bookmarkService),
         ),
-        // Phase 13.1: the user's chosen research field (drives Home).
+        // Phase 13.1: the user's chosen research field (persisted; Profile).
         ChangeNotifierProvider(create: (_) => ResearchFieldProvider()..load()),
+        // Phase 14.2: OpenAlex subfield taxonomy + Home feed filter selection.
+        ChangeNotifierProvider(create: (_) => SubfieldFilterProvider(_service)),
         // Lab 03 tab ViewModels (Home / Journals / Keywords).
         ChangeNotifierProvider(
           create: (_) =>

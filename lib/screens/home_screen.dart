@@ -3,48 +3,71 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../models/models.dart';
 import '../viewmodels/viewmodels.dart';
 import '../widgets/widgets.dart';
 import 'detail_screen.dart';
 
-/// Home tab (Phase 13.2): a light feed of **trending publications** — recently
-/// published and highly cited. It loads on open (global trending); an optional
-/// research field (set on Profile or here) scopes the trend to a topic. No
-/// OpenAlex aggregate totals — just the papers. Logic lives in [HomeViewModel].
-class HomeScreen extends StatelessWidget {
+/// Home tab (Phase 14): a research-discovery feed. It opens on **rising**
+/// publications (recent + gaining citations); the user can switch the sort
+/// (Rising / Newest / Top cited), search papers, and filter by an OpenAlex
+/// subfield. Cursor pagination loads more as the list scrolls. No aggregate
+/// totals — just the papers. Logic lives in [HomeViewModel].
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final vm = context.read<HomeViewModel>();
+      if (vm.state == ViewState.idle) vm.load();
+    });
+  }
+
+  @override
+  void dispose() {
+    _scrollController
+      ..removeListener(_onScroll)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    final vm = context.read<HomeViewModel>();
+    if (!_scrollController.hasClients) return;
+    final pos = _scrollController.position;
+    if (pos.pixels >= pos.maxScrollExtent - 400) vm.loadMore();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final fieldProvider = context.watch<ResearchFieldProvider>();
     final vm = context.watch<HomeViewModel>();
+    final subfields = context.watch<SubfieldFilterProvider?>();
 
-    if (!fieldProvider.ready) {
-      return const LoadingView(message: 'Loading…');
-    }
-
-    // Load trending on open, and reload when the field filter changes.
-    final chosen = fieldProvider.field ?? '';
-    if (vm.state == ViewState.idle || chosen != vm.field) {
+    // Keep the feed in sync with the selected subfield.
+    final selectedId = subfields?.subfieldId;
+    if (subfields != null && selectedId != vm.subfieldId) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (vm.state == ViewState.idle || chosen != vm.field) {
-          vm.load(field: chosen);
-        }
+        if (selectedId != vm.subfieldId) vm.setSubfield(selectedId);
       });
     }
 
     return Column(
       children: [
-        _TrendingHeader(
-          field: chosen,
-          onEdit: () async {
-            final value = await _promptForField(context, initial: chosen);
-            if (value != null) await fieldProvider.setField(value);
-          },
-          onClear: chosen.isEmpty
-              ? null
-              : () => fieldProvider.setField(''),
+        TopicSearchBar(
+          hintText: 'Search papers (e.g. large language models)',
+          onSubmit: (q) => context.read<HomeViewModel>().search(q),
         ),
+        _Controls(vm: vm, subfields: subfields),
         Expanded(child: _buildBody(context, vm)),
       ],
     );
@@ -54,165 +77,256 @@ class HomeScreen extends StatelessWidget {
     switch (vm.state) {
       case ViewState.idle:
       case ViewState.loading:
-        return const LoadingView(message: 'Loading trending publications…');
+        return const LoadingView(message: 'Loading publications…');
       case ViewState.error:
         return ErrorView(
           message: vm.errorMessage ?? 'Something went wrong.',
           onRetry: vm.retry,
         );
       case ViewState.empty:
-        return EmptyView(
-          message: vm.field.isEmpty
-              ? 'No trending publications right now.'
-              : 'No trending publications found for "${vm.field}".',
+        return RefreshIndicator(
+          onRefresh: vm.refresh,
+          child: ListView(
+            children: [
+              const SizedBox(height: 120),
+              EmptyView(
+                message: vm.query.isEmpty
+                    ? 'No publications found. Pull to refresh.'
+                    : 'No papers found for "${vm.query}".',
+              ),
+            ],
+          ),
         );
       case ViewState.success:
-        return _TrendingFeed(vm: vm);
+        return RefreshIndicator(
+          onRefresh: vm.refresh,
+          child: ListView.builder(
+            controller: _scrollController,
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            itemCount: vm.works.length + 1, // + footer
+            itemBuilder: (context, i) {
+              if (i == vm.works.length) return _Footer(vm: vm);
+              final work = vm.works[i];
+              return PaperCard(
+                work: work,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => DetailScreen(work: work)),
+                ),
+              );
+            },
+          ),
+        );
     }
   }
 }
 
-/// Trending list, with the PDF export action.
-class _TrendingFeed extends StatelessWidget {
-  const _TrendingFeed({required this.vm});
+/// Sort toggle + subfield filter chip + export action.
+class _Controls extends StatelessWidget {
+  const _Controls({required this.vm, required this.subfields});
 
   final HomeViewModel vm;
+  final SubfieldFilterProvider? subfields;
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Trending now',
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
-              ),
-              if (vm.canExport || vm.isExporting)
-                TextButton.icon(
-                  onPressed: vm.isExporting
-                      ? null
-                      : () => _exportReport(context, vm),
-                  icon: vm.isExporting
-                      ? const SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.picture_as_pdf_outlined, size: 18),
-                  label: Text(vm.isExporting ? 'Exporting…' : 'Export'),
-                ),
-            ],
-          ),
-        ),
-        for (final work in vm.recentWorks)
-          PaperCard(
-            work: work,
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => DetailScreen(work: work)),
-            ),
-          ),
-        const SizedBox(height: 16),
-      ],
-    );
-  }
-}
-
-/// Header: shows whether the feed is global or field-scoped, with edit/clear.
-class _TrendingHeader extends StatelessWidget {
-  const _TrendingHeader({
-    required this.field,
-    required this.onEdit,
-    this.onClear,
-  });
-
-  final String field;
-  final VoidCallback onEdit;
-  final VoidCallback? onClear;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scoped = field.isNotEmpty;
+    final selected = subfields?.selected;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 8, 0),
+      padding: const EdgeInsets.fromLTRB(12, 2, 4, 2),
       child: Row(
         children: [
-          Icon(
-            Icons.trending_up,
-            size: 18,
-            color: theme.colorScheme.primary,
-          ),
-          const SizedBox(width: 8),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Trending publications', style: theme.textTheme.labelSmall),
-                Text(
-                  scoped ? 'In $field' : 'Across all fields',
-                  style: theme.textTheme.titleMedium,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  SegmentedButton<WorkSort>(
+                    showSelectedIcon: false,
+                    style: const ButtonStyle(
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    segments: const [
+                      ButtonSegment(
+                        value: WorkSort.rising,
+                        label: Text('Rising'),
+                      ),
+                      ButtonSegment(
+                        value: WorkSort.newest,
+                        label: Text('Newest'),
+                      ),
+                      ButtonSegment(
+                        value: WorkSort.topCited,
+                        label: Text('Top cited'),
+                      ),
+                    ],
+                    selected: {vm.sort},
+                    onSelectionChanged: (s) =>
+                        context.read<HomeViewModel>().setSort(s.first),
+                  ),
+                  const SizedBox(width: 8),
+                  if (subfields != null)
+                    InputChip(
+                      avatar: const Icon(Icons.category_outlined, size: 18),
+                      label: Text(selected?.displayName ?? 'All fields'),
+                      onPressed: () => _openSubfieldPicker(context, subfields!),
+                      onDeleted: selected == null
+                          ? null
+                          : () => subfields!.clear(),
+                    ),
+                ],
+              ),
             ),
           ),
-          if (onClear != null)
+          if (vm.canExport || vm.isExporting)
             IconButton(
-              tooltip: 'Show all fields',
-              icon: const Icon(Icons.clear, size: 20),
-              onPressed: onClear,
+              tooltip: 'Export PDF report',
+              onPressed: vm.isExporting
+                  ? null
+                  : () => _exportReport(context, vm),
+              icon: vm.isExporting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.picture_as_pdf_outlined),
             ),
-          IconButton(
-            tooltip: 'Filter by field',
-            icon: const Icon(Icons.tune, size: 20),
-            onPressed: onEdit,
-          ),
         ],
       ),
     );
   }
 }
 
-/// Dialog that asks the user to type a research field. Returns the trimmed
-/// value, or null when cancelled / empty.
-Future<String?> _promptForField(BuildContext context, {String initial = ''}) {
-  final controller = TextEditingController(text: initial);
-  return showDialog<String>(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      title: const Text('Filter trending by field'),
-      content: TextField(
-        controller: controller,
-        autofocus: true,
-        textInputAction: TextInputAction.done,
-        decoration: const InputDecoration(
-          hintText: 'e.g. Machine Learning, Genomics',
+/// List footer: a "load more" spinner / button, or an end-of-list marker.
+class _Footer extends StatelessWidget {
+  const _Footer({required this.vm});
+
+  final HomeViewModel vm;
+
+  @override
+  Widget build(BuildContext context) {
+    if (vm.loadingMore) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 20),
+        child: Center(
+          child: SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
         ),
-        onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(ctx),
-          child: const Text('Cancel'),
+      );
+    }
+    if (vm.hasMore) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Center(
+          child: TextButton(
+            onPressed: vm.loadMore,
+            child: const Text('Load more'),
+          ),
         ),
-        FilledButton(
-          onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-          child: const Text('Apply'),
-        ),
-      ],
-    ),
-  ).then((v) => (v == null || v.isEmpty) ? null : v);
+      );
+    }
+    return const SizedBox(height: 24);
+  }
 }
 
-/// Builds the trending report PDF, opens the OS share sheet for the saved file,
-/// and — when the cloud upload succeeded — shows the Storage download URL.
+/// Bottom-sheet picker for the OpenAlex subfield filter (searchable list).
+Future<void> _openSubfieldPicker(
+  BuildContext context,
+  SubfieldFilterProvider provider,
+) async {
+  provider.ensureLoaded();
+  await showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (ctx) => _SubfieldPickerSheet(provider: provider),
+  );
+}
+
+class _SubfieldPickerSheet extends StatefulWidget {
+  const _SubfieldPickerSheet({required this.provider});
+
+  final SubfieldFilterProvider provider;
+
+  @override
+  State<_SubfieldPickerSheet> createState() => _SubfieldPickerSheetState();
+}
+
+class _SubfieldPickerSheetState extends State<_SubfieldPickerSheet> {
+  String _filter = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = widget.provider;
+    return AnimatedBuilder(
+      animation: provider,
+      builder: (context, _) {
+        final all = provider.subfields;
+        final query = _filter.trim().toLowerCase();
+        final items = query.isEmpty
+            ? all
+            : all
+                  .where((s) => s.displayName.toLowerCase().contains(query))
+                  .toList();
+        return SizedBox(
+          height: MediaQuery.of(context).size.height * 0.7,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Column(
+              children: [
+                TextField(
+                  autofocus: true,
+                  decoration: const InputDecoration(
+                    prefixIcon: Icon(Icons.search),
+                    hintText: 'Filter subfields',
+                  ),
+                  onChanged: (v) => setState(() => _filter = v),
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: !provider.ready && provider.loading
+                      ? const LoadingView(message: 'Loading subfields…')
+                      : provider.loadError != null
+                      ? ErrorView(
+                          message: provider.loadError!,
+                          onRetry: provider.ensureLoaded,
+                        )
+                      : ListView(
+                          children: [
+                            ListTile(
+                              leading: const Icon(Icons.clear_all),
+                              title: const Text('All fields'),
+                              selected: provider.selected == null,
+                              onTap: () {
+                                provider.clear();
+                                Navigator.pop(context);
+                              },
+                            ),
+                            for (final s in items)
+                              ListTile(
+                                title: Text(s.displayName),
+                                selected: provider.selected == s,
+                                onTap: () {
+                                  provider.select(s);
+                                  Navigator.pop(context);
+                                },
+                              ),
+                          ],
+                        ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Builds the feed report PDF, opens the OS share sheet for the saved file, and
+/// — when the cloud upload succeeded — shows the Storage download URL.
 Future<void> _exportReport(BuildContext context, HomeViewModel vm) async {
   final uid = context.read<AuthViewModel?>()?.user?.uid ?? 'anonymous';
   final messenger = ScaffoldMessenger.of(context);
@@ -229,9 +343,9 @@ Future<void> _exportReport(BuildContext context, HomeViewModel vm) async {
     await SharePlus.instance.share(
       ShareParams(
         files: [XFile(path)],
-        text: vm.field.isEmpty
+        text: vm.query.isEmpty
             ? 'Trending publications'
-            : 'Trending publications in ${vm.field}',
+            : 'Publications for ${vm.query}',
       ),
     );
   }

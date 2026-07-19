@@ -111,8 +111,8 @@ void main() {
               storage: storage,
               saveReport: fakeSaver,
             )
-            ..field = 'quantum'
-            ..recentWorks = _works
+            ..query = 'quantum'
+            ..works = _works
             ..state = ViewState.success;
 
       await vm.exportReport(uid: 'user-1');
@@ -153,8 +153,8 @@ void main() {
               storage: storage,
               saveReport: fakeSaver,
             )
-            ..field = 'quantum'
-            ..recentWorks = _works
+            ..query = 'quantum'
+            ..works = _works
             ..state = ViewState.success;
 
       await vm.exportReport(uid: 'user-1');
@@ -167,8 +167,8 @@ void main() {
 
     test('exports locally with no Storage configured at all', () async {
       final vm = HomeViewModel(_unusedService(), saveReport: fakeSaver)
-        ..field = 'quantum'
-        ..recentWorks = _works
+        ..query = 'quantum'
+        ..works = _works
         ..state = ViewState.success;
 
       await vm.exportReport(uid: 'anonymous');
@@ -184,8 +184,8 @@ void main() {
               _unusedService(),
               saveReport: (bytes, name) async => throw Exception('disk full'),
             )
-            ..field = 'quantum'
-            ..recentWorks = _works
+            ..query = 'quantum'
+            ..works = _works
             ..state = ViewState.success;
 
       await vm.exportReport(uid: 'user-1');
