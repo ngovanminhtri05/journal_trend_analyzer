@@ -15,5 +15,6 @@ export 'keywords_viewmodel.dart';
 export 'notifications_viewmodel.dart';
 export 'research_field_provider.dart';
 export 'search_provider.dart';
+export 'subfield_filter_provider.dart';
 export 'trend_provider.dart';
 export 'view_state.dart';
