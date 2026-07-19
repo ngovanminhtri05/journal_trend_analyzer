@@ -140,6 +140,69 @@ class OpenAlexService {
     return _parseWorks(json);
   }
 
+  /// Phase 14.1 (Home discovery): a cursor-paginated feed of works.
+  ///
+  /// - No [query]: a browse feed ordered by [sort]. `rising`/`topCited` scope to
+  ///   a recency window ([windowDays]) and order by citations; `newest` orders
+  ///   by publication date with no window.
+  /// - With [query]: a relevance-ranked search (`relevance_score:desc`, all
+  ///   time — no recency window).
+  ///
+  /// [subfieldId] (full or short OpenAlex id) scopes to
+  /// `primary_topic.subfield.id`. [cursor] threads OpenAlex cursor pagination —
+  /// pass null for the first page (primed with `*`), then feed back
+  /// [WorksPage.nextCursor]. No new HTTP client.
+  Future<WorksPage> discoverWorks({
+    String? query,
+    String? subfieldId,
+    WorkSort sort = WorkSort.rising,
+    int windowDays = 365,
+    String? cursor,
+    int perPage = 25,
+  }) async {
+    final q = query?.trim() ?? '';
+    final isSearch = q.isNotEmpty;
+
+    final filters = <String>[];
+    // Recency window applies only to the browse feed (search spans all time).
+    final windowed =
+        !isSearch &&
+        (sort == WorkSort.rising || sort == WorkSort.topCited) &&
+        windowDays > 0;
+    if (windowed) {
+      final since = DateTime.now().subtract(Duration(days: windowDays));
+      filters.add('from_publication_date:${_isoDate(since)}');
+    }
+    final subId = subfieldId == null ? '' : shortOpenAlexId(subfieldId);
+    if (subId.isNotEmpty) filters.add('primary_topic.subfield.id:$subId');
+
+    final sortKey = isSearch
+        ? 'relevance_score:desc'
+        : (sort == WorkSort.newest
+              ? 'publication_date:desc'
+              : 'cited_by_count:desc');
+
+    final json = await _getJson(
+      _apiUri(_worksPath, {
+        'sort': sortKey,
+        'per-page': '$perPage',
+        'cursor': cursor ?? '*',
+        if (filters.isNotEmpty) 'filter': filters.join(','),
+        if (isSearch) 'search': q,
+      }),
+    );
+
+    final meta = json['meta'];
+    final nextCursor = (meta is Map) ? meta['next_cursor'] as String? : null;
+    return WorksPage(works: _parseWorks(json), nextCursor: nextCursor);
+  }
+
+  /// Formats a date as `YYYY-MM-DD` for OpenAlex `from_publication_date`.
+  static String _isoDate(DateTime d) {
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${d.year}-${two(d.month)}-${two(d.day)}';
+  }
+
   /// Phase 13.2 (Home): **trending** publications — recently published *and*
   /// highly cited (recent citation momentum). Global by default; pass [field] to
   /// scope the trend to a topic. No aggregate totals — just the papers.

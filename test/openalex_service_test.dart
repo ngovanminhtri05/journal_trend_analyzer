@@ -180,4 +180,124 @@ void main() {
       expect(() => service.searchWorks('ai'), throwsA(isA<NetworkException>()));
     });
   });
+
+  group('discoverWorks (Phase 14.1)', () {
+    String discoverBody(
+      List<Map<String, dynamic>> results, {
+      String? nextCursor,
+    }) => jsonEncode({
+      'meta': {'count': results.length, 'next_cursor': nextCursor},
+      'results': results,
+    });
+
+    test('rising (default): recent window + most-cited, cursor primed', () async {
+      final captured = <Uri>[];
+      final service = _serviceReturning(
+        http.Response(
+          discoverBody([
+            {'display_name': 'Rising Paper', 'cited_by_count': 12},
+          ], nextCursor: 'CUR2'),
+          200,
+        ),
+        captured: captured,
+      );
+
+      final page = await service.discoverWorks(); // defaults: rising, 365d
+
+      expect(page, isA<WorksPage>());
+      expect(page.works.single.title, 'Rising Paper');
+      expect(page.nextCursor, 'CUR2');
+      expect(page.hasMore, isTrue);
+
+      final uri = captured.single;
+      expect(uri.path, '/works');
+      expect(uri.queryParameters['sort'], 'cited_by_count:desc');
+      expect(uri.queryParameters['per-page'], '25');
+      expect(uri.queryParameters['cursor'], '*'); // first page primes the cursor
+      expect(
+        uri.queryParameters['filter'],
+        contains('from_publication_date:'),
+      );
+      expect(uri.queryParameters['search'], isNull);
+    });
+
+    test('newest: sort by date, no recency window', () async {
+      final captured = <Uri>[];
+      final service = _serviceReturning(
+        http.Response(discoverBody(const []), 200),
+        captured: captured,
+      );
+
+      await service.discoverWorks(sort: WorkSort.newest);
+
+      final uri = captured.single;
+      expect(uri.queryParameters['sort'], 'publication_date:desc');
+      expect(uri.queryParameters['filter'], isNot(contains('from_publication_date')));
+    });
+
+    test('topCited: keeps the recency window from windowDays', () async {
+      final captured = <Uri>[];
+      final service = _serviceReturning(
+        http.Response(discoverBody(const []), 200),
+        captured: captured,
+      );
+
+      await service.discoverWorks(sort: WorkSort.topCited, windowDays: 730);
+
+      final uri = captured.single;
+      expect(uri.queryParameters['sort'], 'cited_by_count:desc');
+      expect(uri.queryParameters['filter'], contains('from_publication_date:'));
+    });
+
+    test('subfield filter uses the short id', () async {
+      final captured = <Uri>[];
+      final service = _serviceReturning(
+        http.Response(discoverBody(const []), 200),
+        captured: captured,
+      );
+
+      await service.discoverWorks(
+        subfieldId: 'https://openalex.org/subfields/1702',
+      );
+
+      final uri = captured.single;
+      expect(
+        uri.queryParameters['filter'],
+        contains('primary_topic.subfield.id:1702'),
+      );
+    });
+
+    test('search: relevance sort, no window, keeps subfield filter', () async {
+      final captured = <Uri>[];
+      final service = _serviceReturning(
+        http.Response(discoverBody(const []), 200),
+        captured: captured,
+      );
+
+      await service.discoverWorks(query: 'crispr', subfieldId: '1702');
+
+      final uri = captured.single;
+      expect(uri.queryParameters['search'], 'crispr');
+      expect(uri.queryParameters['sort'], 'relevance_score:desc');
+      expect(uri.queryParameters['filter'], isNot(contains('from_publication_date')));
+      expect(
+        uri.queryParameters['filter'],
+        contains('primary_topic.subfield.id:1702'),
+      );
+    });
+
+    test('threads a supplied cursor; null next_cursor means no more pages', () async {
+      final captured = <Uri>[];
+      final service = _serviceReturning(
+        http.Response(discoverBody(const []), 200), // meta.next_cursor: null
+        captured: captured,
+      );
+
+      final page = await service.discoverWorks(cursor: 'ABC123');
+
+      expect(captured.single.queryParameters['cursor'], 'ABC123');
+      expect(page.nextCursor, isNull);
+      expect(page.hasMore, isFalse);
+    });
+  });
 }

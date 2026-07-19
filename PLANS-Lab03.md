@@ -145,5 +145,42 @@ Firebase demos (Remote Config/Notifications) **kept** in a small Profile section
 
 ---
 
+## Phase 14: Home discovery redesign (planned 2026-07-19)
+
+**Spec delta (Home behavior — product contract).** Home becomes a research-discovery
+feed (no OpenAlex aggregate totals):
+
+- **Default = "Rising" feed:** recent works ordered by citations — recent papers already
+  gaining traction. Query: `filter=from_publication_date:<window>` (default last 12 months)
+  `+ sort=cited_by_count:desc`. ("Up-rising" is a proxy — OpenAlex has no native trending.)
+- **Sort toggle:** `Rising` (default) · `Newest` (`publication_date:desc`) · `Top cited`
+  (2-yr window + `cited_by_count:desc`).
+- **Search papers:** a search bar; with a query, `search=q` + `sort=relevance_score:desc`,
+  respecting the active subfield filter.
+- **Subfield filter:** pick an OpenAlex subfield (Domain→Field→Subfield) → adds
+  `primary_topic.subfield.id:<shortId>`; shown as a removable chip. **Reuse** `getSubfields()`,
+  `FilterProvider`, `widgets/filter_panel.dart`.
+- **Pagination:** cursor-based load-more (`cursor=*`→`next_cursor`, per_page 25).
+- Reuse: single `OpenAlexService` client, `PaperCard`, state views. The old free-text field
+  filter is replaced by search + subfield filter (`ResearchFieldProvider` may seed a default
+  subfield or move to Profile-only).
+
+**Validation:** `team_validation_mode: manual-pass` (no subagents). Product/Architecture/
+Security/QA/Skeptic reviewed by the planner. OpenAlex query design cross-checked against
+current API docs (sort keys, `primary_topic.subfield.id`, cursor paging). No secrets/permissions/
+billing impact (OpenAlex is public; mailto already set). lint/format baseline exists
+(`flutter analyze` enforced) — no setup task needed.
+
+| Task | 内容 | DoD | Depends | Status |
+|------|------|-----|---------|--------|
+| 14.1 | `OpenAlexService.discoverWorks({query, subfieldId, WorkSort sort, windowDays, cursor})` — builds `from_publication_date`+`primary_topic.subfield.id` filters, sort, `search`, cursor paging; returns page + `nextCursor`. No new HTTP client. `[tdd:required]` | Unit tests assert the exact query params for each sort / filter / search combo + cursor threading; analyze clean | - | cc:todo |
+| 14.2 | Subfield source: cache `getSubfields()`; reuse/extend `FilterProvider` to expose the selected subfield + its `primary_topic.subfield.id` clause. `[tdd:required]` | Unit test: selecting a subfield yields the right clause; list cached once | 14.1 | cc:todo |
+| 14.3 | `HomeViewModel`: Rising default, sort switch, search, subfield filter, pagination state (append/hasMore/loadingMore/refresh). `[tdd:required]` | Unit tests: state transitions per sort/search/filter; load-more appends; error/empty | 14.1, 14.2 | cc:todo |
+| 14.4 | `HomeScreen` UI: search bar + sort segmented control + subfield filter chip & Domain→Field→Subfield picker (reuse `filter_panel`) + rising list + load-more + pull-to-refresh + loading/empty/error. `[tdd:skip:ui]` | Renders each state; tapping sort/filter/search reloads; scroll loads more | 14.3 | cc:todo |
+| 14.5 | Wire export + analytics to the new feed; retire the free-text field on Home (keep/seed via `ResearchFieldProvider` decision). `[tdd:skip:ui]` | Export/analytics still fire; no dead code; analyze clean | 14.3 | cc:todo |
+| 14.6 | Update unit + widget tests green; then Patrol E2E for the new Home (device rerun). `[tdd:required]` | `flutter analyze` clean; `flutter test` green; Patrol updated | 14.1–14.5 | cc:todo |
+
+---
+
 ## Status legend
 `cc:todo` not started · `cc:wip` in progress · `cc:done` completed · `blocked` (reason required)
