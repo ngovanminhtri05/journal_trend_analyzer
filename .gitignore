@@ -53,3 +53,6 @@ dist/
 
 # Patrol generated test bundle
 patrol_test/
+
+# Throwaway analyze/test/build logs from local runs (evidence = *.log/*.html/*.png)
+docs/patrol-evidence/*.txt
