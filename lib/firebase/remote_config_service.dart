@@ -16,6 +16,9 @@ abstract interface class RemoteConfigApi implements Listenable {
   /// Max keywords shown in the Keywords ranked list.
   int get maxKeywords;
 
+  /// How many publications the Home feed fetches per page (server-tunable).
+  int get homePageSize;
+
   /// Human-readable diagnostic of where the values came from and how the last
   /// fetch went (shown on the Profile card so the demo is verifiable).
   String get statusLabel;
@@ -36,11 +39,19 @@ class RemoteConfigService extends ChangeNotifier implements RemoteConfigApi {
 
   static const String keyMaxJournals = 'max_journals';
   static const String keyMaxKeywords = 'max_keywords';
+  static const String keyHomePageSize = 'home_page_size';
   static const int defaultMaxJournals = 15;
   static const int defaultMaxKeywords = 20;
+  static const int defaultHomePageSize = 25;
+
+  /// OpenAlex accepts 1–200 per page; keep the tunable inside a sane range so a
+  /// bad console value can't break (or hammer) the feed.
+  static const int minHomePageSize = 5;
+  static const int maxHomePageSize = 200;
 
   int _maxJournals = defaultMaxJournals;
   int _maxKeywords = defaultMaxKeywords;
+  int _homePageSize = defaultHomePageSize;
   String _statusLabel = 'Not fetched yet';
 
   StreamSubscription<RemoteConfigUpdate>? _updates;
@@ -50,6 +61,9 @@ class RemoteConfigService extends ChangeNotifier implements RemoteConfigApi {
 
   @override
   int get maxKeywords => _maxKeywords;
+
+  @override
+  int get homePageSize => _homePageSize;
 
   @override
   String get statusLabel => _statusLabel;
@@ -70,6 +84,7 @@ class RemoteConfigService extends ChangeNotifier implements RemoteConfigApi {
     await rc.setDefaults(const {
       keyMaxJournals: defaultMaxJournals,
       keyMaxKeywords: defaultMaxKeywords,
+      keyHomePageSize: defaultHomePageSize,
     });
 
     var fetchStatus = 'no fetch';
@@ -105,6 +120,10 @@ class RemoteConfigService extends ChangeNotifier implements RemoteConfigApi {
   void _cacheValues(FirebaseRemoteConfig rc, String origin) {
     _maxJournals = rc.getInt(keyMaxJournals);
     _maxKeywords = rc.getInt(keyMaxKeywords);
+    // Clamp so a bad console value can't break the feed.
+    _homePageSize = rc
+        .getInt(keyHomePageSize)
+        .clamp(minHomePageSize, maxHomePageSize);
     final fromServer =
         rc.getValue(keyMaxJournals).source == ValueSource.valueRemote;
     _statusLabel = fromServer
@@ -126,12 +145,15 @@ class StaticRemoteConfig implements RemoteConfigApi {
   const StaticRemoteConfig({
     this.maxJournals = RemoteConfigService.defaultMaxJournals,
     this.maxKeywords = RemoteConfigService.defaultMaxKeywords,
+    this.homePageSize = RemoteConfigService.defaultHomePageSize,
   });
 
   @override
   final int maxJournals;
   @override
   final int maxKeywords;
+  @override
+  final int homePageSize;
 
   @override
   String get statusLabel => 'Static (test defaults)';

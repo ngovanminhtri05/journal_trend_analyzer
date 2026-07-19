@@ -55,12 +55,26 @@ void main() {
       when(() => rc.fetchAndActivate()).thenAnswer((_) async => true);
       when(() => rc.getInt('max_journals')).thenReturn(30);
       when(() => rc.getInt('max_keywords')).thenReturn(40);
+      when(() => rc.getInt('home_page_size')).thenReturn(50);
 
       final service = RemoteConfigService(remoteConfig: rc);
       await service.initialize();
 
       expect(service.maxJournals, 30);
       expect(service.maxKeywords, 40);
+      expect(service.homePageSize, 50);
+    });
+
+    test('clamps an out-of-range home page size', () async {
+      when(() => rc.fetchAndActivate()).thenAnswer((_) async => true);
+      when(() => rc.getInt('max_journals')).thenReturn(15);
+      when(() => rc.getInt('max_keywords')).thenReturn(20);
+      when(() => rc.getInt('home_page_size')).thenReturn(9999); // > OpenAlex max
+
+      final service = RemoteConfigService(remoteConfig: rc);
+      await service.initialize();
+
+      expect(service.homePageSize, RemoteConfigService.maxHomePageSize);
     });
 
     test('keeps defaults when fetchAndActivate throws', () async {
@@ -73,6 +87,9 @@ void main() {
       when(
         () => rc.getInt('max_keywords'),
       ).thenReturn(RemoteConfigService.defaultMaxKeywords);
+      when(
+        () => rc.getInt('home_page_size'),
+      ).thenReturn(RemoteConfigService.defaultHomePageSize);
 
       final service = RemoteConfigService(remoteConfig: rc);
       await service.initialize(); // must not rethrow

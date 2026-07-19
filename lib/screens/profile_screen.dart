@@ -154,6 +154,12 @@ class _RemoteConfigCard extends StatelessWidget {
             title: const Text('Max keywords'),
             trailing: Text('${config.maxKeywords}'),
           ),
+          ListTile(
+            leading: const Icon(Icons.tune),
+            title: const Text('Home page size'),
+            subtitle: const Text('Publications fetched per page'),
+            trailing: Text('${config.homePageSize}'),
+          ),
         ],
       ),
     );

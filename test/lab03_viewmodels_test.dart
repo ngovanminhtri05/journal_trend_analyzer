@@ -3,9 +3,33 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:flutter/foundation.dart';
+import 'package:journal_trend_analyzer/firebase/remote_config_service.dart';
 import 'package:journal_trend_analyzer/models/models.dart';
 import 'package:journal_trend_analyzer/services/openalex_service.dart';
 import 'package:journal_trend_analyzer/viewmodels/viewmodels.dart';
+
+/// A Remote Config whose page size can be changed at runtime, to simulate a
+/// real-time server push.
+class _FakeRemoteConfig extends ChangeNotifier implements RemoteConfigApi {
+  _FakeRemoteConfig(this._homePageSize);
+
+  int _homePageSize;
+
+  void pushHomePageSize(int value) {
+    _homePageSize = value;
+    notifyListeners();
+  }
+
+  @override
+  int get homePageSize => _homePageSize;
+  @override
+  int get maxJournals => RemoteConfigService.defaultMaxJournals;
+  @override
+  int get maxKeywords => RemoteConfigService.defaultMaxKeywords;
+  @override
+  String get statusLabel => 'fake';
+}
 
 /// Captures every request URI so tests can assert OpenAlex URL building
 /// (group_by / filter / sort), then routes a canned response by query params.
@@ -250,6 +274,32 @@ void main() {
       final before = s.uris.length;
       await vm.loadMore();
       expect(s.uris.length, before);
+    });
+
+    test('fetches the Remote Config page size', () async {
+      final s = pagedService();
+      final vm = HomeViewModel(
+        s.service,
+        remoteConfig: const StaticRemoteConfig(homePageSize: 7),
+      );
+      await vm.load();
+
+      expect(vm.pageSize, 7);
+      expect(s.uris.last.queryParameters['per-page'], '7');
+    });
+
+    test('applies a live Remote Config page-size push', () async {
+      final s = pagedService();
+      final config = _FakeRemoteConfig(5);
+      final vm = HomeViewModel(s.service, remoteConfig: config);
+      await vm.load();
+      expect(s.uris.last.queryParameters['per-page'], '5');
+
+      // Server pushes a new size — the feed refetches with it, no restart.
+      config.pushHomePageSize(9);
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      expect(s.uris.last.queryParameters['per-page'], '9');
     });
 
     test('empty and error states', () async {

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../firebase/analytics_service.dart';
+import '../firebase/remote_config_service.dart';
 import '../firebase/storage_service.dart';
 import '../models/models.dart';
 import '../services/openalex_service.dart';
@@ -21,14 +22,41 @@ class HomeViewModel extends ChangeNotifier {
     AnalyticsApi? analytics,
     ReportStorageApi? storage,
     ReportFileSaver? saveReport,
+    RemoteConfigApi? remoteConfig,
   }) : _analytics = analytics,
        _storage = storage,
-       _saveReport = saveReport ?? saveReportToTemp;
+       _saveReport = saveReport ?? saveReportToTemp,
+       _remoteConfig = remoteConfig {
+    // Real-time Remote Config: reload when the server changes the page size.
+    _remoteConfig?.addListener(_onRemoteConfigChanged);
+  }
 
   final OpenAlexService _service;
   final AnalyticsApi? _analytics;
   final ReportStorageApi? _storage;
   final ReportFileSaver _saveReport;
+  final RemoteConfigApi? _remoteConfig;
+
+  /// How many works to fetch per page — server-tunable via Remote Config
+  /// (`home_page_size`), falling back to the in-code default.
+  int get pageSize =>
+      _remoteConfig?.homePageSize ?? RemoteConfigService.defaultHomePageSize;
+
+  /// The page size the current feed was loaded with (to detect config changes).
+  int? _appliedPageSize;
+
+  void _onRemoteConfigChanged() {
+    // Only refetch when the size actually changed and we're not mid-load.
+    if (_appliedPageSize == null || pageSize == _appliedPageSize) return;
+    if (state == ViewState.loading || loadingMore) return;
+    load();
+  }
+
+  @override
+  void dispose() {
+    _remoteConfig?.removeListener(_onRemoteConfigChanged);
+    super.dispose();
+  }
 
   ViewState state = ViewState.idle;
   String? errorMessage;
@@ -73,12 +101,14 @@ class HomeViewModel extends ChangeNotifier {
     // Analytics: log a topic search when the feed is a query search.
     if (query.isNotEmpty) _analytics?.logSearchTopic(query).ignore();
 
+    _appliedPageSize = pageSize;
     try {
       final page = await _service.discoverWorks(
         query: query.isEmpty ? null : query,
         subfieldId: subfieldId,
         sort: sort,
         windowDays: _windowDays,
+        perPage: pageSize,
       );
       works = page.works;
       _nextCursor = page.nextCursor;
@@ -136,6 +166,7 @@ class HomeViewModel extends ChangeNotifier {
         subfieldId: subfieldId,
         sort: sort,
         windowDays: _windowDays,
+        perPage: pageSize,
         cursor: _nextCursor,
       );
       works = [...works, ...page.works];
