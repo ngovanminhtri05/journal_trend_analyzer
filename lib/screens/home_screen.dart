@@ -130,61 +130,65 @@ class _Controls extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final selected = subfields?.selected;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 2, 4, 2),
-      child: Row(
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  SegmentedButton<WorkSort>(
-                    showSelectedIcon: false,
-                    style: const ButtonStyle(
-                      visualDensity: VisualDensity.compact,
-                    ),
-                    segments: [
-                      for (final s in WorkSort.values)
-                        ButtonSegment(
-                          value: s,
-                          label: Text(s.label, maxLines: 1),
-                        ),
-                    ],
-                    selected: {vm.sort},
-                    onSelectionChanged: (s) =>
-                        context.read<HomeViewModel>().setSort(s.first),
-                  ),
-                  const SizedBox(width: 8),
-                  if (subfields != null)
-                    InputChip(
-                      avatar: const Icon(Icons.category_outlined, size: 18),
-                      label: Text(selected?.displayName ?? 'All fields'),
-                      onPressed: () => _openSubfieldPicker(context, subfields!),
-                      onDeleted: selected == null
-                          ? null
-                          : () => subfields!.clear(),
-                    ),
-                ],
-              ),
+    return Column(
+      children: [
+        // Sort toggle gets the full width so all three labels fit.
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 2, 12, 0),
+          child: SizedBox(
+            width: double.infinity,
+            child: SegmentedButton<WorkSort>(
+              showSelectedIcon: false,
+              style: const ButtonStyle(visualDensity: VisualDensity.compact),
+              segments: [
+                for (final s in WorkSort.values)
+                  ButtonSegment(value: s, label: Text(s.label, maxLines: 1)),
+              ],
+              selected: {vm.sort},
+              onSelectionChanged: (s) =>
+                  context.read<HomeViewModel>().setSort(s.first),
             ),
           ),
-          if (vm.canExport || vm.isExporting)
-            IconButton(
-              tooltip: 'Export PDF report',
-              onPressed: vm.isExporting
-                  ? null
-                  : () => _exportReport(context, vm),
-              icon: vm.isExporting
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.picture_as_pdf_outlined),
-            ),
-        ],
-      ),
+        ),
+        // Subfield filter + export on their own row.
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 2, 4, 2),
+          child: Row(
+            children: [
+              if (subfields != null)
+                Flexible(
+                  child: InputChip(
+                    avatar: const Icon(Icons.category_outlined, size: 18),
+                    label: Text(
+                      selected?.displayName ?? 'All fields',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    onPressed: () => _openSubfieldPicker(context, subfields!),
+                    onDeleted: selected == null
+                        ? null
+                        : () => subfields!.clear(),
+                  ),
+                ),
+              const Spacer(),
+              if (vm.canExport || vm.isExporting)
+                IconButton(
+                  tooltip: 'Export PDF report',
+                  onPressed: vm.isExporting
+                      ? null
+                      : () => _exportReport(context, vm),
+                  icon: vm.isExporting
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.picture_as_pdf_outlined),
+                ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
