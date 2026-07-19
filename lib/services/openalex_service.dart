@@ -173,6 +173,10 @@ class OpenAlexService {
       final since = DateTime.now().subtract(Duration(days: windowDays));
       filters.add('from_publication_date:${_isoDate(since)}');
     }
+    // Never surface future-dated records. OpenAlex holds placeholder /
+    // "forthcoming" publication dates (2050-01-01 and similar) which would
+    // otherwise dominate the `newest` sort.
+    filters.add('to_publication_date:${_isoDate(DateTime.now())}');
     final subId = subfieldId == null ? '' : shortOpenAlexId(subfieldId);
     if (subId.isNotEmpty) filters.add('primary_topic.subfield.id:$subId');
 

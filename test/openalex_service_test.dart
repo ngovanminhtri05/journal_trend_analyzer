@@ -235,6 +235,27 @@ void main() {
       expect(uri.queryParameters['filter'], isNot(contains('from_publication_date')));
     });
 
+    test('never returns future-dated records (caps at today)', () async {
+      // OpenAlex holds placeholder dates like 2050-01-01; without an upper
+      // bound they dominate the `newest` sort.
+      final captured = <Uri>[];
+      final service = _serviceReturning(
+        http.Response(discoverBody(const []), 200),
+        captured: captured,
+      );
+
+      await service.discoverWorks(sort: WorkSort.newest);
+
+      final today = DateTime.now();
+      final iso =
+          '${today.year}-${today.month.toString().padLeft(2, '0')}-'
+          '${today.day.toString().padLeft(2, '0')}';
+      expect(
+        captured.single.queryParameters['filter'],
+        contains('to_publication_date:$iso'),
+      );
+    });
+
     test('topCited: keeps the recency window from windowDays', () async {
       final captured = <Uri>[];
       final service = _serviceReturning(
