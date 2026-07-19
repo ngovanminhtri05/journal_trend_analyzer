@@ -9,10 +9,11 @@ enum WorkSort {
   /// Most-cited works within the recency window.
   topCited;
 
-  /// Short label for the sort toggle UI.
+  /// Short label for the sort toggle UI (kept compact so the three segments fit
+  /// on a phone without wrapping).
   String get label => switch (this) {
     WorkSort.rising => 'Rising',
     WorkSort.newest => 'Newest',
-    WorkSort.topCited => 'Top cited',
+    WorkSort.topCited => 'Cited',
   };
 }

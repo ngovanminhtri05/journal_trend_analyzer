@@ -144,19 +144,12 @@ class _Controls extends StatelessWidget {
                     style: const ButtonStyle(
                       visualDensity: VisualDensity.compact,
                     ),
-                    segments: const [
-                      ButtonSegment(
-                        value: WorkSort.rising,
-                        label: Text('Rising'),
-                      ),
-                      ButtonSegment(
-                        value: WorkSort.newest,
-                        label: Text('Newest'),
-                      ),
-                      ButtonSegment(
-                        value: WorkSort.topCited,
-                        label: Text('Top cited'),
-                      ),
+                    segments: [
+                      for (final s in WorkSort.values)
+                        ButtonSegment(
+                          value: s,
+                          label: Text(s.label, maxLines: 1),
+                        ),
                     ],
                     selected: {vm.sort},
                     onSelectionChanged: (s) =>

@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show compute;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
@@ -109,22 +110,37 @@ Future<Uint8List> buildDashboardReportPdf({
   return doc.save();
 }
 
-/// Builds a "recent publications in my field" PDF (Phase 13.2) — the light Home
-/// export. Lists each recent paper (title / authors / year / venue) with no
-/// OpenAlex aggregate totals. Pure and UI-agnostic like [buildDashboardReportPdf].
+/// Plain, isolate-sendable input for [renderRecentPapersReportPdf].
+class RecentPapersReportData {
+  const RecentPapersReportData({
+    required this.field,
+    required this.rows,
+    required this.generatedAt,
+  });
+
+  final String field;
+
+  /// One row per paper: `[title, authors, year, venue]`, already ASCII-safe.
+  final List<List<String>> rows;
+
+  final DateTime generatedAt;
+}
+
+/// Builds a "recent publications" PDF (Phase 13.2) — the Home export.
+///
+/// Rendering a PDF is CPU-heavy and would jank the UI if it ran on the main
+/// isolate, so the rows are prepared here (cheap) and the actual render is
+/// handed to a background isolate via [compute].
 Future<Uint8List> buildRecentPapersReportPdf({
   required String field,
   required List<Work> works,
   DateTime? generatedAt,
-}) async {
-  final doc = pw.Document();
-  final now = generatedAt ?? DateTime.now();
+}) {
   const na = 'N/A';
-
   final rows = works
       .take(40)
       .map(
-        (w) => [
+        (w) => <String>[
           _ascii(w.title) ?? na,
           _ascii(w.authorNames) ?? na,
           w.publicationYear?.toString() ?? na,
@@ -132,6 +148,26 @@ Future<Uint8List> buildRecentPapersReportPdf({
         ],
       )
       .toList();
+
+  return compute(
+    renderRecentPapersReportPdf,
+    RecentPapersReportData(
+      field: _ascii(field) ?? na,
+      rows: rows,
+      generatedAt: generatedAt ?? DateTime.now(),
+    ),
+  );
+}
+
+/// Renders the recent-papers PDF. Top-level so it can run on a background
+/// isolate via [compute] — never call this on the UI isolate directly.
+Future<Uint8List> renderRecentPapersReportPdf(
+  RecentPapersReportData data,
+) async {
+  final doc = pw.Document();
+  final now = data.generatedAt;
+  final rows = data.rows;
+  final field = data.field;
 
   doc.addPage(
     pw.MultiPage(
@@ -148,7 +184,7 @@ Future<Uint8List> buildRecentPapersReportPdf({
           ),
         ),
         pw.Text(
-          'Field: ${_ascii(field) ?? na}',
+          'Field: $field',
           style: const pw.TextStyle(fontSize: 14),
         ),
         pw.SizedBox(height: 4),
