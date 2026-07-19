@@ -155,7 +155,8 @@ class _JournalTrendAppState extends State<JournalTrendApp> {
       providers: [
         Provider<OpenAlexService>.value(value: _service),
         Provider<AnalyticsApi>.value(value: _analytics),
-        Provider<RemoteConfigApi>.value(value: _remoteConfig),
+        // Listenable so real-time Remote Config pushes rebuild the UI live.
+        ListenableProvider<RemoteConfigApi>.value(value: _remoteConfig),
         Provider<CrashReporterApi>.value(value: _crashReporter),
         ChangeNotifierProvider(create: (_) => FilterProvider(_service)),
         ChangeNotifierProvider(create: (_) => SearchProvider(_service)),

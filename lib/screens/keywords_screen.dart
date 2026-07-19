@@ -51,7 +51,8 @@ class KeywordsScreen extends StatelessWidget {
         final theme = Theme.of(context);
         final maxCount = vm.keywords.first.count;
         // Remote Config (task 8.4): the list length is server-tunable.
-        final maxKeywords = context.read<RemoteConfigApi>().maxKeywords;
+        // watch (not read) so a real-time Remote Config push re-limits the list.
+        final maxKeywords = context.watch<RemoteConfigApi>().maxKeywords;
         return ListView(
           padding: const EdgeInsets.all(16),
           children: [

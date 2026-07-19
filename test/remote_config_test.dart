@@ -44,6 +44,11 @@ void main() {
       when(() => value.source).thenReturn(ValueSource.valueRemote);
       when(() => rc.getValue(any())).thenReturn(value);
       when(() => rc.lastFetchStatus).thenReturn(RemoteConfigFetchStatus.success);
+      // Real-time updates channel (no events in these tests).
+      when(
+        () => rc.onConfigUpdated,
+      ).thenAnswer((_) => const Stream<RemoteConfigUpdate>.empty());
+      when(() => rc.activate()).thenAnswer((_) async => true);
     });
 
     test('caches the fetched server values', () async {
