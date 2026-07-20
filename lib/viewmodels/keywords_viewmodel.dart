@@ -56,7 +56,6 @@ class KeywordDetailViewModel extends ChangeNotifier {
   ViewState state = ViewState.idle;
   String? errorMessage;
   String _lastKeywordId = '';
-  String _lastKeywordText = '';
 
   /// `group_by=publication_year` buckets for the keyword (year trend chart).
   List<GroupByItem> yearCounts = const [];
@@ -67,36 +66,34 @@ class KeywordDetailViewModel extends ChangeNotifier {
   /// Journals most associated with the keyword, sorted by count descending.
   List<GroupByItem> relatedJournals = const [];
 
-  /// Top publications containing the keyword, most-cited first. Sourced from a
-  /// free-text search of the keyword (broader, more intuitive "contains the
-  /// keyword" coverage than the `keywords.id` tag alone).
+  /// Top publications **tagged with this keyword**, most-cited first.
+  ///
+  /// Scoped with `keywords.id` rather than a free-text search: a text search for
+  /// e.g. "Computer science" pulls in loosely-matching papers (a crystallography
+  /// tool topped that list), while the tag filter returns works OpenAlex
+  /// actually classified under the keyword.
   List<Work> relatedWorks = const [];
 
   /// FR-9 trend verdict derived from [yearCounts] (null when too little data).
   TrendClassification? get trendClassification => classifyTrend(yearCounts);
 
-  Future<void> load(String keywordId, {String keywordText = ''}) async {
+  Future<void> load(String keywordId) async {
     final id = shortOpenAlexId(keywordId);
     if (id.isEmpty) return;
 
     _lastKeywordId = keywordId;
-    _lastKeywordText = keywordText.trim();
     state = ViewState.loading;
     errorMessage = null;
     notifyListeners();
 
     try {
       final filter = ['keywords.id:$id'];
-      final text = _lastKeywordText;
       final results = await Future.wait([
         _service.groupByFilter('publication_year', filter),
         _service.groupByFilter('authorships.author.id', filter),
         _service.groupByFilter('primary_location.source.id', filter),
-        // Top papers containing the keyword: text search when we have the
-        // keyword text, else fall back to the keyword tag.
-        text.isNotEmpty
-            ? _service.getTopCited(text, perPage: 25)
-            : _service.getWorksByFilter(filter, perPage: 25),
+        // Top papers tagged with this keyword, most-cited first.
+        _service.getWorksByFilter(filter, perPage: 25),
       ]);
       yearCounts = results[0] as List<GroupByItem>;
       topAuthors = [...results[1] as List<GroupByItem>]
@@ -121,6 +118,5 @@ class KeywordDetailViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> retry() =>
-      load(_lastKeywordId, keywordText: _lastKeywordText);
+  Future<void> retry() => load(_lastKeywordId);
 }

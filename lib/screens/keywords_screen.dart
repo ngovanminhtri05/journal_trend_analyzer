@@ -160,7 +160,7 @@ class KeywordDetailScreen extends StatelessWidget {
       child: ChangeNotifierProvider<KeywordDetailViewModel>(
         create: (ctx) =>
             KeywordDetailViewModel(ctx.read<OpenAlexService>())
-              ..load(keyword.key, keywordText: keyword.keyDisplayName),
+              ..load(keyword.key),
         child: Scaffold(
           appBar: AppBar(title: Text(keyword.keyDisplayName)),
           body: ResponsiveBody(
