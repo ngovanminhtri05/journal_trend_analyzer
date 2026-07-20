@@ -7,6 +7,7 @@ import '../models/models.dart';
 import '../services/openalex_service.dart';
 import '../services/report_builder.dart';
 import '../services/report_file_saver.dart';
+import 'bookmark_provider.dart';
 import 'view_state.dart';
 
 /// Drives the Home discovery feed (Phase 14.3).
@@ -23,12 +24,16 @@ class HomeViewModel extends ChangeNotifier {
     ReportStorageApi? storage,
     ReportFileSaver? saveReport,
     RemoteConfigApi? remoteConfig,
+    BookmarkProvider? bookmarks,
   }) : _analytics = analytics,
        _storage = storage,
        _saveReport = saveReport ?? saveReportToTemp,
-       _remoteConfig = remoteConfig {
+       _remoteConfig = remoteConfig,
+       _bookmarks = bookmarks {
     // Real-time Remote Config: reload when the server changes the page size.
     _remoteConfig?.addListener(_onRemoteConfigChanged);
+    // Following/unfollowing a journal changes what the Newest feed shows.
+    _bookmarks?.addListener(_onFollowsChanged);
   }
 
   final OpenAlexService _service;
@@ -36,6 +41,29 @@ class HomeViewModel extends ChangeNotifier {
   final ReportStorageApi? _storage;
   final ReportFileSaver _saveReport;
   final RemoteConfigApi? _remoteConfig;
+  final BookmarkProvider? _bookmarks;
+
+  /// Full ids of the journals the user follows (a journal bookmark == a follow).
+  List<String> get followedJournalIds =>
+      _bookmarks?.byType(BookmarkType.journal).map((b) => b.id).toList() ??
+      const [];
+
+  /// How many journals the Newest feed is currently scoped to (0 = global).
+  int get followedJournalCount => followedJournalIds.length;
+
+  /// The follow set the current feed was loaded with (to detect changes).
+  List<String>? _appliedFollows;
+
+  void _onFollowsChanged() {
+    // Only the Newest feed is scoped by follows.
+    if (sort != WorkSort.newest || _appliedFollows == null) return;
+    if (state == ViewState.loading || loadingMore) return;
+    final now = followedJournalIds;
+    final changed =
+        now.length != _appliedFollows!.length ||
+        !now.every(_appliedFollows!.contains);
+    if (changed) load();
+  }
 
   /// How many works to fetch per page — server-tunable via Remote Config
   /// (`home_page_size`), falling back to the in-code default.
@@ -55,6 +83,7 @@ class HomeViewModel extends ChangeNotifier {
   @override
   void dispose() {
     _remoteConfig?.removeListener(_onRemoteConfigChanged);
+    _bookmarks?.removeListener(_onFollowsChanged);
     super.dispose();
   }
 
@@ -88,7 +117,8 @@ class HomeViewModel extends ChangeNotifier {
   bool get canExport => state == ViewState.success && works.isNotEmpty;
 
   /// Recency window (days) for the browse feed: a longer window for "top cited".
-  int get _windowDays => sort == WorkSort.topCited ? 730 : 365;
+  /// Recency window for the Rising feed (ignored by Newest).
+  static const int _risingWindowDays = 365;
 
   /// Loads the first page for the current [sort] / [query] / [subfieldId].
   Future<void> load() async {
@@ -102,12 +132,18 @@ class HomeViewModel extends ChangeNotifier {
     if (query.isNotEmpty) _analytics?.logSearchTopic(query).ignore();
 
     _appliedPageSize = pageSize;
+    // Newest is scoped to the journals the user follows (empty = global).
+    final follows = sort == WorkSort.newest
+        ? followedJournalIds
+        : const <String>[];
+    _appliedFollows = follows;
     try {
       final page = await _service.discoverWorks(
         query: query.isEmpty ? null : query,
         subfieldId: subfieldId,
+        sourceIds: follows,
         sort: sort,
-        windowDays: _windowDays,
+        windowDays: _risingWindowDays,
         perPage: pageSize,
       );
       works = page.works;
@@ -164,8 +200,9 @@ class HomeViewModel extends ChangeNotifier {
       final page = await _service.discoverWorks(
         query: query.isEmpty ? null : query,
         subfieldId: subfieldId,
+        sourceIds: _appliedFollows ?? const <String>[],
         sort: sort,
-        windowDays: _windowDays,
+        windowDays: _risingWindowDays,
         perPage: pageSize,
         cursor: _nextCursor,
       );

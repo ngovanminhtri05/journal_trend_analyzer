@@ -90,9 +90,13 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               const SizedBox(height: 120),
               EmptyView(
-                message: vm.query.isEmpty
-                    ? 'No publications found. Pull to refresh.'
-                    : 'No papers found for "${vm.query}".',
+                message: vm.query.isNotEmpty
+                    ? 'No papers found for "${vm.query}".'
+                    : (vm.sort == WorkSort.newest &&
+                          vm.followedJournalCount > 0)
+                    ? 'No recent papers from the journals you follow. '
+                          'Follow more journals on the Journals tab.'
+                    : 'No publications found. Pull to refresh.',
               ),
             ],
           ),
@@ -188,6 +192,37 @@ class _Controls extends StatelessWidget {
             ],
           ),
         ),
+        // Newest is scoped to followed journals — say so, so a short list or an
+        // empty feed is never a mystery.
+        if (vm.sort == WorkSort.newest)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 0, 14, 6),
+            child: Row(
+              children: [
+                Icon(
+                  vm.followedJournalCount > 0
+                      ? Icons.bookmark
+                      : Icons.bookmark_border,
+                  size: 14,
+                  color: Theme.of(context).colorScheme.outline,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    vm.followedJournalCount > 0
+                        ? 'From ${vm.followedJournalCount} followed '
+                              '${vm.followedJournalCount == 1 ? "journal" : "journals"}'
+                        : 'All journals — follow journals to focus this feed',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.outline,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
       ],
     );
   }

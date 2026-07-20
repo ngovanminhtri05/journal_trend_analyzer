@@ -256,18 +256,22 @@ void main() {
       );
     });
 
-    test('topCited: keeps the recency window from windowDays', () async {
+    test('sourceIds scope the feed to followed journals (OR-joined)', () async {
       final captured = <Uri>[];
       final service = _serviceReturning(
         http.Response(discoverBody(const []), 200),
         captured: captured,
       );
 
-      await service.discoverWorks(sort: WorkSort.topCited, windowDays: 730);
+      await service.discoverWorks(
+        sort: WorkSort.newest,
+        sourceIds: const ['https://openalex.org/S1', 'S2'],
+      );
 
-      final uri = captured.single;
-      expect(uri.queryParameters['sort'], 'cited_by_count:desc');
-      expect(uri.queryParameters['filter'], contains('from_publication_date:'));
+      expect(
+        captured.single.queryParameters['filter'],
+        contains('primary_location.source.id:S1|S2'),
+      );
     });
 
     test('subfield filter uses the short id', () async {

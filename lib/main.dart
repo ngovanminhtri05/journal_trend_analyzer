@@ -172,11 +172,12 @@ class _JournalTrendAppState extends State<JournalTrendApp> {
         ChangeNotifierProvider(create: (_) => SubfieldFilterProvider(_service)),
         // Lab 03 tab ViewModels (Home / Journals / Keywords).
         ChangeNotifierProvider(
-          create: (_) => HomeViewModel(
+          create: (ctx) => HomeViewModel(
             _service,
             analytics: _analytics,
             storage: _storage,
             remoteConfig: _remoteConfig,
+            bookmarks: ctx.read<BookmarkProvider>(),
           ),
         ),
         ChangeNotifierProvider(create: (_) => JournalsViewModel(_service)),

@@ -6,8 +6,10 @@ import 'package:http/testing.dart';
 import 'package:flutter/foundation.dart';
 import 'package:journal_trend_analyzer/firebase/remote_config_service.dart';
 import 'package:journal_trend_analyzer/models/models.dart';
+import 'package:journal_trend_analyzer/services/bookmark_service.dart';
 import 'package:journal_trend_analyzer/services/openalex_service.dart';
 import 'package:journal_trend_analyzer/viewmodels/viewmodels.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// A Remote Config whose page size can be changed at runtime, to simulate a
 /// real-time server push.
@@ -300,6 +302,56 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 50));
 
       expect(s.uris.last.queryParameters['per-page'], '9');
+    });
+
+    test('newest scopes the feed to followed journals', () async {
+      SharedPreferences.setMockInitialValues({});
+      final s = pagedService();
+      final bookmarks = BookmarkProvider(BookmarkService());
+      // Wait for the provider's async init before following.
+      while (!bookmarks.ready) {
+        await Future<void>.delayed(const Duration(milliseconds: 5));
+      }
+      await bookmarks.toggle(
+        Bookmark(
+          type: BookmarkType.journal,
+          id: 'https://openalex.org/S1',
+          displayName: 'Nature',
+        ),
+      );
+
+      final vm = HomeViewModel(s.service, bookmarks: bookmarks);
+      await vm.setSort(WorkSort.newest);
+
+      expect(vm.followedJournalCount, 1);
+      expect(
+        s.uris.last.queryParameters['filter'],
+        contains('primary_location.source.id:S1'),
+      );
+    });
+
+    test('rising stays global even with followed journals', () async {
+      SharedPreferences.setMockInitialValues({});
+      final s = pagedService();
+      final bookmarks = BookmarkProvider(BookmarkService());
+      while (!bookmarks.ready) {
+        await Future<void>.delayed(const Duration(milliseconds: 5));
+      }
+      await bookmarks.toggle(
+        Bookmark(
+          type: BookmarkType.journal,
+          id: 'https://openalex.org/S1',
+          displayName: 'Nature',
+        ),
+      );
+
+      final vm = HomeViewModel(s.service, bookmarks: bookmarks);
+      await vm.load(); // default sort: rising
+
+      expect(
+        s.uris.last.queryParameters['filter'] ?? '',
+        isNot(contains('primary_location.source.id')),
+      );
     });
 
     test('empty and error states', () async {

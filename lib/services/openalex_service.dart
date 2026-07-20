@@ -142,19 +142,21 @@ class OpenAlexService {
 
   /// Phase 14.1 (Home discovery): a cursor-paginated feed of works.
   ///
-  /// - No [query]: a browse feed ordered by [sort]. `rising`/`topCited` scope to
-  ///   a recency window ([windowDays]) and order by citations; `newest` orders
-  ///   by publication date with no window.
+  /// - No [query]: a browse feed ordered by [sort]. `rising` scopes to a
+  ///   recency window ([windowDays]) and orders by citations; `newest` orders by
+  ///   publication date with no lower bound.
   /// - With [query]: a relevance-ranked search (`relevance_score:desc`, all
   ///   time — no recency window).
   ///
   /// [subfieldId] (full or short OpenAlex id) scopes to
-  /// `primary_topic.subfield.id`. [cursor] threads OpenAlex cursor pagination —
-  /// pass null for the first page (primed with `*`), then feed back
-  /// [WorksPage.nextCursor]. No new HTTP client.
+  /// `primary_topic.subfield.id`. [sourceIds] scopes to a set of venues
+  /// (OR-joined) — used to show only the journals the user follows.
+  /// [cursor] threads OpenAlex cursor pagination — pass null for the first page
+  /// (primed with `*`), then feed back [WorksPage.nextCursor]. No new HTTP client.
   Future<WorksPage> discoverWorks({
     String? query,
     String? subfieldId,
+    List<String> sourceIds = const [],
     WorkSort sort = WorkSort.rising,
     int windowDays = 365,
     String? cursor,
@@ -165,10 +167,7 @@ class OpenAlexService {
 
     final filters = <String>[];
     // Recency window applies only to the browse feed (search spans all time).
-    final windowed =
-        !isSearch &&
-        (sort == WorkSort.rising || sort == WorkSort.topCited) &&
-        windowDays > 0;
+    final windowed = !isSearch && sort == WorkSort.rising && windowDays > 0;
     if (windowed) {
       final since = DateTime.now().subtract(Duration(days: windowDays));
       filters.add('from_publication_date:${_isoDate(since)}');
@@ -179,6 +178,14 @@ class OpenAlexService {
     filters.add('to_publication_date:${_isoDate(DateTime.now())}');
     final subId = subfieldId == null ? '' : shortOpenAlexId(subfieldId);
     if (subId.isNotEmpty) filters.add('primary_topic.subfield.id:$subId');
+    // Followed venues: OpenAlex ORs values within one filter clause with `|`.
+    final sources = sourceIds
+        .map(shortOpenAlexId)
+        .where((id) => id.isNotEmpty)
+        .toList();
+    if (sources.isNotEmpty) {
+      filters.add('primary_location.source.id:${sources.join('|')}');
+    }
 
     final sortKey = isSearch
         ? 'relevance_score:desc'
