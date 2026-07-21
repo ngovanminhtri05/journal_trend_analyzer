@@ -50,9 +50,14 @@ app.*.map.json
 # Distributables / build artifacts
 dist/
 *.apk
+*.aab
+*.ipa
+
+# Report exports
+*.pdf
 
 # Patrol generated test bundle
 patrol_test/
 
-# Throwaway analyze/test/build logs from local runs (evidence = *.log/*.html/*.png)
-docs/patrol-evidence/*.txt
+# Throwaway analyze/test/build evidence from local runs (*.log/*.html/*.txt/*.png)
+docs/patrol-evidence/
