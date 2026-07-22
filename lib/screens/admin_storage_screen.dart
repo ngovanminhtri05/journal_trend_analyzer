@@ -89,6 +89,7 @@ class _ReportTile extends StatelessWidget {
   }
 
   Future<void> _confirmDelete(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -108,6 +109,12 @@ class _ReportTile extends StatelessWidget {
         ],
       ),
     );
-    if (confirmed ?? false) vm.delete(report.path);
+    if (confirmed ?? false) {
+      final before = vm.errorMessage;
+      await vm.delete(report.path);
+      if (vm.errorMessage != null && vm.errorMessage != before) {
+        messenger.showSnackBar(SnackBar(content: Text(vm.errorMessage!)));
+      }
+    }
   }
 }

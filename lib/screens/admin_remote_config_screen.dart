@@ -67,6 +67,7 @@ class AdminRemoteConfigScreen extends StatelessWidget {
     final valueController = TextEditingController(
       text: existing?.defaultValue ?? '',
     );
+    final messenger = ScaffoldMessenger.of(context);
     final result = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -100,7 +101,10 @@ class AdminRemoteConfigScreen extends StatelessWidget {
     if (result ?? false) {
       final key = keyController.text.trim();
       if (key.isNotEmpty) {
-        vm.updateParameter(key, valueController.text.trim());
+        await vm.updateParameter(key, valueController.text.trim());
+        if (vm.errorMessage != null) {
+          messenger.showSnackBar(SnackBar(content: Text(vm.errorMessage!)));
+        }
       }
     }
   }

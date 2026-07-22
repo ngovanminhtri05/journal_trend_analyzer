@@ -92,6 +92,7 @@ class _UserTile extends StatelessWidget {
   }
 
   Future<void> _confirmDelete(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -112,15 +113,27 @@ class _UserTile extends StatelessWidget {
         ],
       ),
     );
-    if (confirmed ?? false) vm.delete(user.uid);
+    if (confirmed ?? false) {
+      final before = vm.errorMessage;
+      await vm.delete(user.uid);
+      if (vm.errorMessage != null && vm.errorMessage != before) {
+        messenger.showSnackBar(SnackBar(content: Text(vm.errorMessage!)));
+      }
+    }
   }
 
   Future<void> _toggleDisabled(BuildContext context) async {
     if (user.disabled) {
       // Re-enabling an account is not destructive; no confirmation needed.
-      vm.setDisabled(user.uid, false);
+      final messenger = ScaffoldMessenger.of(context);
+      final before = vm.errorMessage;
+      await vm.setDisabled(user.uid, false);
+      if (vm.errorMessage != null && vm.errorMessage != before) {
+        messenger.showSnackBar(SnackBar(content: Text(vm.errorMessage!)));
+      }
       return;
     }
+    final messenger = ScaffoldMessenger.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -140,6 +153,11 @@ class _UserTile extends StatelessWidget {
         ],
       ),
     );
-    if (confirmed ?? false) vm.setDisabled(user.uid, true);
+    if (confirmed ?? false) {
+      await vm.setDisabled(user.uid, true);
+      if (vm.errorMessage != null) {
+        messenger.showSnackBar(SnackBar(content: Text(vm.errorMessage!)));
+      }
+    }
   }
 }
