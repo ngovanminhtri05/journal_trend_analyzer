@@ -68,9 +68,13 @@ Future<void> signInWithGoogle(PatrolIntegrationTester $) async {
     Selector(textContains: '@'),
     timeout: const Duration(seconds: 30),
   );
+  // HANDOFF.md documents cold start alone taking up to ~40s (RemoteConfig
+  // fetchAndActivate blocks runApp) — clearPackageData between test cases
+  // means every sign-in here is a cold start, so 30s wasn't a safe margin
+  // above that documented ceiling. 60s leaves real headroom.
   await $.waitUntilVisible(
     $(NavigationBar),
-    timeout: const Duration(seconds: 30),
+    timeout: const Duration(seconds: 60),
   );
 }
 

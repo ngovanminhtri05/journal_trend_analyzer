@@ -39,6 +39,15 @@ android {
         // Patrol E2E (Lab 03 Phase 10) — JUnit runner + clear state between tests.
         testInstrumentationRunner = "pl.leancode.patrol.PatrolJUnitRunner"
         testInstrumentationRunnerArguments["clearPackageData"] = "true"
+        // Auto-grant all manifest-declared runtime permissions (notably
+        // POST_NOTIFICATIONS, requested by NotificationsViewModel at launch)
+        // before the app under test starts, so the native permission dialog
+        // can never appear and intermittently cover/steal focus from the
+        // Flutter UI mid-test. Investigated as a hypothesis for TC11's "Sign
+        // out" flakiness — inconclusive in isolation (the NavigationBar
+        // timeout below turned out to matter more), but kept regardless: it
+        // removes a real, confirmed-possible source of interference for free.
+        testInstrumentationRunnerArguments["grantPermissions"] = "true"
     }
 
     testOptions {
