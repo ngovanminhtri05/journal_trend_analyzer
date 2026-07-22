@@ -5,6 +5,7 @@
 library;
 
 export 'admin_logs_viewmodel.dart';
+export 'admin_users_viewmodel.dart';
 export 'auth_viewmodel.dart';
 export 'bookmark_provider.dart';
 export 'comparison_provider.dart';
