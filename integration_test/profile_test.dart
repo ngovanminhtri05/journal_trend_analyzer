@@ -14,6 +14,11 @@ void main() {
 
     expect($('E2E Tester'), findsWidgets);
     expect($('e2e@example.com'), findsWidgets);
+    // "Sign out" is the last item in the Profile ListView — on real devices
+    // the card stack (account info, Notifications, Remote Config,
+    // Crashlytics) overflows the viewport, so it needs a scroll to become
+    // hit-testable (unlike a headless widget test, which doesn't clip).
+    await $.scrollUntilVisible(finder: $('Sign out').finder);
     expect($('Sign out'), findsOneWidget);
   });
 

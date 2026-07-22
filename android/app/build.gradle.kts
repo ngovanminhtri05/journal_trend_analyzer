@@ -39,15 +39,14 @@ android {
         // Patrol E2E (Lab 03 Phase 10) — JUnit runner + clear state between tests.
         testInstrumentationRunner = "pl.leancode.patrol.PatrolJUnitRunner"
         testInstrumentationRunnerArguments["clearPackageData"] = "true"
-        // Auto-grant all manifest-declared runtime permissions (notably
-        // POST_NOTIFICATIONS, requested by NotificationsViewModel at launch)
-        // before the app under test starts, so the native permission dialog
-        // can never appear and intermittently cover/steal focus from the
-        // Flutter UI mid-test. Investigated as a hypothesis for TC11's "Sign
-        // out" flakiness — inconclusive in isolation (the NavigationBar
-        // timeout below turned out to matter more), but kept regardless: it
-        // removes a real, confirmed-possible source of interference for free.
-        testInstrumentationRunnerArguments["grantPermissions"] = "true"
+        // NOTE: testInstrumentationRunnerArguments["grantPermissions"] = "true"
+        // was tried here first but PatrolJUnitRunner does not honor it — the
+        // native POST_NOTIFICATIONS dialog still appeared and blocked the
+        // Profile screen (confirmed via a real-device screenshot: TC8 failed
+        // because the dialog covered the widgets underneath). The actual fix
+        // is the GrantPermissionRule in MainActivityTest.java, which grants
+        // the permission at the JUnit-instrumentation level before every
+        // test method runs, independent of how the runner handles this arg.
     }
 
     testOptions {
@@ -69,5 +68,6 @@ flutter {
 
 dependencies {
     androidTestUtil("androidx.test:orchestrator:1.5.1")
+    androidTestImplementation("androidx.test:rules:1.2.0")
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }

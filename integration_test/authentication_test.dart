@@ -29,9 +29,11 @@ void main() {
     // Sign in first (clearPackageData means we start signed out).
     await signInWithGoogle($);
 
-    // Go to Profile and sign out.
+    // Go to Profile and sign out. "Sign out" is the last item in the Profile
+    // ListView — on real devices the card stack overflows the viewport, so
+    // it needs a scroll to become hit-testable.
     await openTab($, 'Profile');
-    await $.waitUntilVisible($('Sign out'));
+    await $.scrollUntilVisible(finder: $('Sign out').finder);
     await $('Sign out').tap();
 
     // Back to the Login screen.
