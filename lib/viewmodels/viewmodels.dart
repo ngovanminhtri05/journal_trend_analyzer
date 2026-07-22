@@ -6,6 +6,7 @@ library;
 
 export 'admin_logs_viewmodel.dart';
 export 'admin_remote_config_viewmodel.dart';
+export 'admin_storage_viewmodel.dart';
 export 'admin_users_viewmodel.dart';
 export 'auth_viewmodel.dart';
 export 'bookmark_provider.dart';
