@@ -8,6 +8,7 @@
 library;
 
 export 'admin_access_service.dart';
+export 'admin_logs_mirror.dart';
 export 'analytics_service.dart';
 export 'app_user.dart';
 export 'auth_service.dart';
