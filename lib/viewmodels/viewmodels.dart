@@ -4,6 +4,7 @@
 /// these; no business logic lives in the Views themselves.
 library;
 
+export 'admin_logs_viewmodel.dart';
 export 'auth_viewmodel.dart';
 export 'bookmark_provider.dart';
 export 'comparison_provider.dart';
