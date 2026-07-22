@@ -78,7 +78,7 @@ class _UserTile extends StatelessWidget {
             : PopupMenuButton<String>(
                 onSelected: (value) => value == 'delete'
                     ? _confirmDelete(context)
-                    : vm.setDisabled(user.uid, !user.disabled),
+                    : _toggleDisabled(context),
                 itemBuilder: (context) => [
                   PopupMenuItem(
                     value: 'toggle',
@@ -113,5 +113,33 @@ class _UserTile extends StatelessWidget {
       ),
     );
     if (confirmed ?? false) vm.delete(user.uid);
+  }
+
+  Future<void> _toggleDisabled(BuildContext context) async {
+    if (user.disabled) {
+      // Re-enabling an account is not destructive; no confirmation needed.
+      vm.setDisabled(user.uid, false);
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Disable this account?'),
+        content: Text(
+          '${user.label} will not be able to sign in until re-enabled.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Disable'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed ?? false) vm.setDisabled(user.uid, true);
   }
 }

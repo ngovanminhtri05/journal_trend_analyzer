@@ -42,7 +42,11 @@ class AdminRemoteConfigScreen extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           children: [
             for (final param in vm.parameters)
-              _ParamTile(param: param, vm: vm),
+              _ParamTile(
+                param: param,
+                vm: vm,
+                onTap: () => _showEditDialog(context, vm, existing: param),
+              ),
             const SizedBox(height: 12),
             OutlinedButton.icon(
               onPressed: () => _showEditDialog(context, vm),
@@ -103,10 +107,11 @@ class AdminRemoteConfigScreen extends StatelessWidget {
 }
 
 class _ParamTile extends StatelessWidget {
-  const _ParamTile({required this.param, required this.vm});
+  const _ParamTile({required this.param, required this.vm, required this.onTap});
 
   final RemoteConfigParam param;
   final AdminRemoteConfigViewModel vm;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -116,16 +121,8 @@ class _ParamTile extends StatelessWidget {
         title: Text(param.key),
         subtitle: Text(param.defaultValue),
         trailing: const Icon(Icons.edit_outlined),
-        onTap: () => _edit(context),
+        onTap: onTap,
       ),
     );
-  }
-
-  Future<void> _edit(BuildContext context) async {
-    final screen = context
-        .findAncestorWidgetOfExactType<AdminRemoteConfigScreen>();
-    if (screen != null) {
-      await screen._showEditDialog(context, vm, existing: param);
-    }
   }
 }
