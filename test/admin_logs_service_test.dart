@@ -5,14 +5,17 @@ import 'package:mocktail/mocktail.dart';
 
 class _MockFirestore extends Mock implements FirebaseFirestore {}
 
+// ignore: subtype_of_sealed_class
 class _MockCollectionRef extends Mock
     implements CollectionReference<Map<String, dynamic>> {}
 
+// ignore: subtype_of_sealed_class
 class _MockQuery extends Mock implements Query<Map<String, dynamic>> {}
 
 class _MockQuerySnapshot extends Mock
     implements QuerySnapshot<Map<String, dynamic>> {}
 
+// ignore: subtype_of_sealed_class
 class _MockQueryDocSnapshot extends Mock
     implements QueryDocumentSnapshot<Map<String, dynamic>> {}
 
