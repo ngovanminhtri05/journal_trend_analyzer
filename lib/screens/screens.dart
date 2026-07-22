@@ -4,6 +4,11 @@
 /// Profile) and pushed detail screens. Lab 02 screens are kept as bonus.
 library;
 
+export 'admin_dashboard_screen.dart';
+export 'admin_logs_screen.dart';
+export 'admin_remote_config_screen.dart';
+export 'admin_storage_screen.dart';
+export 'admin_users_screen.dart';
 export 'auth_gate.dart';
 export 'dashboard_screen.dart';
 export 'detail_screen.dart';

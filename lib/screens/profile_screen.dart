@@ -6,6 +6,7 @@ import '../firebase/remote_config_service.dart';
 import '../theme/app_theme.dart';
 import '../viewmodels/auth_viewmodel.dart';
 import '../viewmodels/notifications_viewmodel.dart';
+import 'admin_dashboard_screen.dart';
 import 'notifications_screen.dart';
 
 /// Profile tab (Lab 03, task 8.1).
@@ -86,6 +87,8 @@ class ProfileScreen extends StatelessWidget {
         const _RemoteConfigCard(),
         const SizedBox(height: 16),
         const _CrashlyticsCard(),
+        const SizedBox(height: 16),
+        const _AdminDashboardTile(),
         const SizedBox(height: 24),
         FilledButton.icon(
           onPressed: vm.signOut,
@@ -228,6 +231,29 @@ class _CrashlyticsCard extends StatelessWidget {
       ),
     );
     if (confirmed ?? false) reporter.forceCrash();
+  }
+}
+
+/// Admin Dashboard entry (in-app Firebase management): shown only when the
+/// signed-in user carries the `admin` custom claim ([AuthViewModel.isAdmin]).
+class _AdminDashboardTile extends StatelessWidget {
+  const _AdminDashboardTile();
+
+  @override
+  Widget build(BuildContext context) {
+    final isAdmin = context.watch<AuthViewModel?>()?.isAdmin ?? false;
+    if (!isAdmin) return const SizedBox.shrink();
+    return Card(
+      child: ListTile(
+        leading: const Icon(Icons.admin_panel_settings_outlined),
+        title: const Text('Admin Dashboard'),
+        subtitle: const Text('Manage users, Remote Config, Storage, and logs'),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const AdminDashboardScreen())),
+      ),
+    );
   }
 }
 

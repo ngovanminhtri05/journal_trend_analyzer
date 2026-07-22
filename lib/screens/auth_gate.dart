@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../firebase/admin_access_service.dart';
 import '../firebase/analytics_service.dart';
 import '../firebase/auth_service.dart';
 import '../viewmodels/auth_viewmodel.dart';
@@ -27,6 +28,7 @@ class AuthGate extends StatelessWidget {
       create: (context) => AuthViewModel(
         auth ?? AuthService(),
         analytics: context.read<AnalyticsApi?>(),
+        adminAccess: context.read<AdminAccessApi?>(),
       ),
       child: Consumer<AuthViewModel>(
         builder: (context, vm, _) {

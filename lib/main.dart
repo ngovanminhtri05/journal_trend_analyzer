@@ -6,6 +6,8 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'firebase/admin_access_service.dart';
+import 'firebase/admin_logs_mirror.dart';
 import 'firebase/analytics_service.dart';
 import 'firebase/auth_service.dart';
 import 'firebase/crash_reporter_service.dart';
@@ -125,13 +127,16 @@ class _JournalTrendAppState extends State<JournalTrendApp> {
   late final BookmarkService _bookmarkService =
       widget.bookmarkService ?? BookmarkService();
 
-  late final AnalyticsApi _analytics = widget.analytics ?? AnalyticsService();
+  late final AnalyticsApi _analytics =
+      widget.analytics ?? MirroringAnalytics(AnalyticsService());
 
   late final RemoteConfigApi _remoteConfig =
       widget.remoteConfig ?? RemoteConfigService();
 
   late final CrashReporterApi _crashReporter =
-      widget.crashReporter ?? CrashlyticsService();
+      widget.crashReporter ?? MirroringCrashReporter(CrashlyticsService());
+
+  late final AdminAccessApi _adminAccess = AdminAccessService();
 
   late final ReportStorageApi _storage = widget.storage ?? StorageService();
 
@@ -157,6 +162,7 @@ class _JournalTrendAppState extends State<JournalTrendApp> {
         Provider<AnalyticsApi>.value(value: _analytics),
         Provider<RemoteConfigApi>.value(value: _remoteConfig),
         Provider<CrashReporterApi>.value(value: _crashReporter),
+        Provider<AdminAccessApi>.value(value: _adminAccess),
         ChangeNotifierProvider(create: (_) => FilterProvider(_service)),
         ChangeNotifierProvider(create: (_) => SearchProvider(_service)),
         ChangeNotifierProvider(create: (_) => TrendProvider(_service)),

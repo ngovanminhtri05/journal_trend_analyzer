@@ -29,4 +29,13 @@ void main() {
     expect($('15'), findsWidgets);
     expect($('20'), findsWidgets);
   });
+
+  patrolTest('TC8b: Profile hides the Admin Dashboard for a non-admin session', (
+    $,
+  ) async {
+    await pumpSignedInShell($);
+    await openTab($, 'Profile');
+
+    expect($('Admin Dashboard'), findsNothing);
+  });
 }
