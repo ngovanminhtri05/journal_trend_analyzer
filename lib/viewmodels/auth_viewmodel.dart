@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../firebase/admin_access_service.dart';
 import '../firebase/analytics_service.dart';
 import '../firebase/auth_service.dart';
 import '../firebase/app_user.dart';
@@ -16,16 +17,21 @@ enum AuthStatus { unknown, signedOut, signedIn }
 ///
 /// Subscribes to [AuthApi.authStateChanges] and mirrors it into [status] /
 /// [user]. Holds the transient sign-in progress + error for the View. Contains
-/// no Firebase types — it depends only on [AuthApi], so it is fully unit
-/// testable with a fake.
+/// no Firebase types — it depends only on [AuthApi] (and optionally
+/// [AdminAccessApi]), so it is fully unit testable with fakes.
 class AuthViewModel extends ChangeNotifier {
-  AuthViewModel(this._auth, {AnalyticsApi? analytics})
-    : _analytics = analytics {
+  AuthViewModel(
+    this._auth, {
+    AnalyticsApi? analytics,
+    AdminAccessApi? adminAccess,
+  }) : _analytics = analytics,
+       _adminAccess = adminAccess {
     _sub = _auth.authStateChanges.listen(_onUserChanged);
   }
 
   final AuthApi _auth;
   final AnalyticsApi? _analytics;
+  final AdminAccessApi? _adminAccess;
   late final StreamSubscription<AppUser?> _sub;
 
   AuthStatus status = AuthStatus.unknown;
@@ -36,6 +42,10 @@ class AuthViewModel extends ChangeNotifier {
 
   /// Last sign-in error message, or null. Cleared on a new attempt.
   String? errorMessage;
+
+  /// Whether the signed-in user carries the `admin` custom claim. Always
+  /// `false` when signed out or when no [AdminAccessApi] was supplied.
+  bool isAdmin = false;
 
   Future<void> signInWithGoogle() async {
     if (isSigningIn) return;
@@ -72,6 +82,24 @@ class AuthViewModel extends ChangeNotifier {
   void _onUserChanged(AppUser? next) {
     user = next;
     status = next == null ? AuthStatus.signedOut : AuthStatus.signedIn;
+    if (next == null) {
+      isAdmin = false;
+    } else {
+      unawaited(_refreshAdminStatus());
+    }
+    notifyListeners();
+  }
+
+  Future<void> _refreshAdminStatus() async {
+    final access = _adminAccess;
+    if (access == null) return;
+    bool admin;
+    try {
+      admin = await access.isCurrentUserAdmin();
+    } catch (_) {
+      admin = false;
+    }
+    isAdmin = admin;
     notifyListeners();
   }
 

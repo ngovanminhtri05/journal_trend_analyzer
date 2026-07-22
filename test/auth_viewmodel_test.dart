@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:journal_trend_analyzer/firebase/admin_access_service.dart';
 import 'package:journal_trend_analyzer/firebase/app_user.dart';
 import 'package:journal_trend_analyzer/firebase/auth_service.dart';
 import 'package:journal_trend_analyzer/viewmodels/auth_viewmodel.dart';
@@ -114,6 +115,58 @@ void main() {
     test('signOut delegates to the api', () async {
       await vm.signOut();
       expect(api.didSignOut, isTrue);
+    });
+  });
+
+  group('AuthViewModel admin status', () {
+    test('defaults isAdmin to false with no AdminAccessApi supplied', () async {
+      final api = _FakeAuthApi()..signInResult = _ada;
+      final vm = AuthViewModel(api);
+      addTearDown(() {
+        vm.dispose();
+        api.dispose();
+      });
+      api.emit(_ada);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(vm.isAdmin, isFalse);
+    });
+
+    test('refreshes isAdmin from AdminAccessApi when a user signs in', () async {
+      final api = _FakeAuthApi();
+      final vm = AuthViewModel(
+        api,
+        adminAccess: const StaticAdminAccess(isAdmin: true),
+      );
+      addTearDown(() {
+        vm.dispose();
+        api.dispose();
+      });
+
+      api.emit(_ada);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(vm.isAdmin, isTrue);
+    });
+
+    test('resets isAdmin to false on sign-out', () async {
+      final api = _FakeAuthApi();
+      final vm = AuthViewModel(
+        api,
+        adminAccess: const StaticAdminAccess(isAdmin: true),
+      );
+      addTearDown(() {
+        vm.dispose();
+        api.dispose();
+      });
+
+      api.emit(_ada);
+      await Future<void>.delayed(Duration.zero);
+      expect(vm.isAdmin, isTrue);
+
+      api.emit(null);
+      await Future<void>.delayed(Duration.zero);
+      expect(vm.isAdmin, isFalse);
     });
   });
 }
