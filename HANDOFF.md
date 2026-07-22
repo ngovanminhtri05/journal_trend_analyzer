@@ -2,7 +2,7 @@
 
 > Dán file này vào một phiên Claude Code mới để tiếp tục. Đây là nguồn ngữ cảnh
 > duy nhất: trạng thái, quyết định, kiến trúc, môi trường, việc còn lại.
-> **Cập nhật:** 2026-07-17 · **Nhánh:** `main` (đã merge PR #3) & `feat/lab03-firebase`.
+> **Cập nhật:** 2026-07-22 · **Nhánh:** `main` (đã merge PR #3) & `feat/lab03-firebase`.
 
 ---
 
@@ -45,6 +45,10 @@
 4. (Tùy chọn) Cho các **TC feature Patrol** (TC2–TC10) chạy xanh — cần mạng emulator ổn định +
    có thể nới timeout chờ mạng trong test (hiện fail do timeout mạng, KHÔNG phải lỗi code).
 5. (Tùy chọn) Enable Analytics **DebugView** để chụp 7 sự kiện cho báo cáo.
+6. **Tạo Firestore database cho `journal-analyzer-3c319`** (chưa có `(default)` database) — vào
+   https://console.firebase.google.com/project/journal-analyzer-3c319/firestore → Create database
+   (Native mode, region `us-central1`). Đang chặn màn hình **Admin Logs** (đọc Firestore trực tiếp,
+   hiện trống + log `NOT_FOUND: The database (default) does not exist`) — xem chi tiết mục 9.
 
 ## 4. Chạy Patrol E2E (đã hoạt động — LƯU Ý quan trọng)
 - Bản dùng được: **`patrol` 4.7.1** (pubspec) + **`patrol_cli` 4.5.1** (`D:\PubCache\bin\patrol.bat`).
@@ -91,8 +95,58 @@
 - `google-services.json` / `firebase_options.dart` / `GoogleService-Info.plist` (client keys) commit được;
   KHÔNG commit service-account private key (không cần cho lab).
 
+## 9. Admin Panel (Firebase Console → quản lý trong app) — 2026-07-22
+Yêu cầu giáo viên: **FE phải tự quản lý Firebase thay vì mở Firebase Console**. Đã có sẵn 1 admin
+dashboard trong app (Users / Remote Config / Storage / Logs), gate bằng custom claim `admin: true`.
+Phiên này đã **debug & deploy xong phần backend** để tính năng này thật sự chạy được (trước đó code
+đã viết nhưng chưa từng deploy).
+
+- **Cấp quyền admin cho 1 tài khoản:**
+  1. Firebase Console → Project Settings → Service Accounts → Generate new private key →
+     lưu vào `functions/serviceAccountKey.json` (đã có trong `.gitignore`, KHÔNG commit).
+  2. `cd functions && npm install`
+  3. `GOOGLE_APPLICATION_CREDENTIALS=./serviceAccountKey.json node scripts/set-admin-claim.js <uid-hoặc-email>`
+  4. Sign out/in lại trong app để ID token refresh — tile "Admin Dashboard" sẽ hiện ở Profile.
+- **Cloud Functions cho admin (`functions/src/users.ts`, `remote-config.ts`, `storage.ts`) đã deploy
+  thật lên `journal-analyzer-3c319`** (trước đó chỉ có code, chưa từng chạy `firebase deploy`).
+  - Không có `.firebaserc` trong repo → deploy bằng `firebase deploy --only functions --project journal-analyzer-3c319`
+    (CLI cài on-the-fly qua `npx firebase-tools`, không cần cài global).
+  - **Login CLI phải làm thủ công**: `npx firebase-tools login` cần mở trình duyệt thật (không chạy được
+    qua Bash tool non-interactive của Claude Code) → tự chạy lệnh này trong terminal thường của máy.
+  - **Gotcha lớn — org policy chặn Cloud Run public invoker:** 8 hàm admin ban đầu deploy dạng
+    **2nd Gen** (chạy trên Cloud Run). Callable functions cần Cloud Run cho phép gọi không cần
+    Google OAuth token (`allUsers` invoker) vì việc xác thực Firebase Auth nằm **bên trong** hàm.
+    Project này có **Domain Restricted Sharing org policy** chặn cứng `allUsers`/`allAuthenticatedUsers`
+    ở mọi cấp (không thể gán qua Console/CLI dù có role `run.admin`/`cloudfunctions.admin`) →
+    client luôn nhận lỗi `unauthenticated` (chặn ở tầng Cloud Run, log
+    `run.googleapis.com%2Frequests`: *"The request was not authorized to invoke this service..."*,
+    KHÔNG phải lỗi trong `admin-guard.ts`).
+  - **Cách fix đã áp dụng:** downgrade 8 hàm này từ `firebase-functions/v2/https` → **1st Gen**
+    (`firebase-functions/v1`, `functions.https.onCall((data, context) => …)`). 1st Gen không đi qua
+    Cloud Run nên không bị org policy này chặn. Đổi generation cho function đã tồn tại **bắt buộc
+    phải xoá rồi tạo lại** (`firebase functions:delete <tên...> --region us-central1 --force` trước,
+    sau đó `firebase deploy --only functions`) — không thể update tại chỗ.
+  - Logic nghiệp vụ (`admin-guard.ts` + các handler) **không đổi gì** — chỉ đổi lớp wrapper `onCall`,
+    client Flutter (`admin_users_service.dart`…) không cần sửa.
+  - Nếu cần deploy lại về sau mà thấy Firebase CLI báo "Skipping the deploy of unchanged functions"
+    (không áp lại IAM), phải sửa 1 dòng bất kỳ trong source (vd. comment) để CLI nhận diện có thay đổi.
+- **Vấn đề khác phát hiện được, CHƯA fix — còn tồn đọng:** project `journal-analyzer-3c319` **chưa có
+  Firestore database** (`(default)` chưa tạo) → log báo
+  `NOT_FOUND: The database (default) does not exist for project journal-analyzer-3c319`.
+  Ảnh hưởng ít nhất màn hình **Admin Logs** (đọc trực tiếp Firestore collections `admin_events` /
+  `admin_crash_reports`) và có thể cả các tính năng khác dùng Firestore. Cần vào
+  https://console.firebase.google.com/project/journal-analyzer-3c319/firestore → Create database
+  (Native mode, region `us-central1`) rồi test lại Admin Logs.
+- **Đã verify chạy thật trên emulator:** Users list load được, thấy account đã cấp `admin: true`.
+  Remote Config / Storage dùng chung 1 pattern nên nhiều khả năng cũng ổn, nhưng **chưa test riêng**
+  — nên click qua từng mục 1 lần trước khi coi là xong.
+- Chưa có Patrol E2E test nào cho admin panel (chỉ có `profile_test.dart` TC8b kiểm tra tile admin bị
+  ẩn với non-admin) — nếu cần test tự động end-to-end (đăng nhập admin → disable/delete/update), phải
+  viết mới và cần cách gán claim `admin` cho tài khoản test trước khi chạy.
+
 ---
 
 **Việc đầu tiên khi vào phiên mới:** đọc `PLANS-Lab03.md`, `git status`, `git log --oneline -5`.
 Code đã xong + merge main; việc còn lại chủ yếu **thủ công** (StudentID/rename, screenshot+PDF báo cáo,
-video demo) và **tùy chọn** cho các TC Patrol feature chạy xanh.
+video demo) và **tùy chọn** cho các TC Patrol feature chạy xanh. Xem thêm mục 9 cho tiến độ Admin Panel
+(đã chạy được, còn thiếu Firestore database).

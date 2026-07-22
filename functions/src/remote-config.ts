@@ -1,6 +1,8 @@
-import { onCall, HttpsError, CallableRequest } from "firebase-functions/v2/https";
+import * as functions from "firebase-functions/v1";
 import * as admin from "firebase-admin";
 import { requireAdmin, CallableAuth } from "./admin-guard";
+
+const { onCall, HttpsError } = functions.https;
 
 export async function getRemoteConfigTemplateHandler(
   _data: unknown,
@@ -41,11 +43,10 @@ export async function updateRemoteConfigParameterHandler(
   return { key, defaultValue: value };
 }
 
-export const adminGetRemoteConfigTemplate = onCall((request: CallableRequest) =>
-  getRemoteConfigTemplateHandler(request.data, request.auth as CallableAuth | undefined)
+export const adminGetRemoteConfigTemplate = onCall((data, context) =>
+  getRemoteConfigTemplateHandler(data, context.auth as CallableAuth | undefined)
 );
 
-export const adminUpdateRemoteConfigParameter = onCall(
-  (request: CallableRequest) =>
-    updateRemoteConfigParameterHandler(request.data, request.auth as CallableAuth | undefined)
+export const adminUpdateRemoteConfigParameter = onCall((data, context) =>
+  updateRemoteConfigParameterHandler(data, context.auth as CallableAuth | undefined)
 );

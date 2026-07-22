@@ -1,6 +1,8 @@
-import { onCall, HttpsError, CallableRequest } from "firebase-functions/v2/https";
+import * as functions from "firebase-functions/v1";
 import * as admin from "firebase-admin";
 import { requireAdmin, CallableAuth } from "./admin-guard";
+
+const { onCall, HttpsError } = functions.https;
 
 export async function listUsersHandler(
   data: { pageToken?: string },
@@ -60,14 +62,14 @@ export async function deleteUserHandler(
   return { uid: targetUid };
 }
 
-export const adminListUsers = onCall((request: CallableRequest) =>
-  listUsersHandler(request.data, request.auth as CallableAuth | undefined)
+export const adminListUsers = onCall((data, context) =>
+  listUsersHandler(data, context.auth as CallableAuth | undefined)
 );
 
-export const adminSetUserDisabled = onCall((request: CallableRequest) =>
-  setUserDisabledHandler(request.data, request.auth as CallableAuth | undefined)
+export const adminSetUserDisabled = onCall((data, context) =>
+  setUserDisabledHandler(data, context.auth as CallableAuth | undefined)
 );
 
-export const adminDeleteUser = onCall((request: CallableRequest) =>
-  deleteUserHandler(request.data, request.auth as CallableAuth | undefined)
+export const adminDeleteUser = onCall((data, context) =>
+  deleteUserHandler(data, context.auth as CallableAuth | undefined)
 );

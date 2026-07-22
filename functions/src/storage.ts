@@ -1,6 +1,8 @@
-import { onCall, HttpsError, CallableRequest } from "firebase-functions/v2/https";
+import * as functions from "firebase-functions/v1";
 import * as admin from "firebase-admin";
 import { requireAdmin, CallableAuth } from "./admin-guard";
+
+const { onCall, HttpsError } = functions.https;
 
 function assertReportsPath(path: string | undefined): asserts path is string {
   if (!path || !path.startsWith("reports/")) {
@@ -51,14 +53,14 @@ export async function deleteReportHandler(
   return { path: data.path };
 }
 
-export const adminListReports = onCall((request: CallableRequest) =>
-  listReportsHandler(request.data, request.auth as CallableAuth | undefined)
+export const adminListReports = onCall((data, context) =>
+  listReportsHandler(data, context.auth as CallableAuth | undefined)
 );
 
-export const adminGetReportUrl = onCall((request: CallableRequest) =>
-  getReportUrlHandler(request.data, request.auth as CallableAuth | undefined)
+export const adminGetReportUrl = onCall((data, context) =>
+  getReportUrlHandler(data, context.auth as CallableAuth | undefined)
 );
 
-export const adminDeleteReport = onCall((request: CallableRequest) =>
-  deleteReportHandler(request.data, request.auth as CallableAuth | undefined)
+export const adminDeleteReport = onCall((data, context) =>
+  deleteReportHandler(data, context.auth as CallableAuth | undefined)
 );
