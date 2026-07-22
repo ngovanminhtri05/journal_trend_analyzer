@@ -59,8 +59,15 @@ Future<void> pumpRealApp(PatrolIntegrationTester $) async {
 /// account already added to the device.
 Future<void> signInWithGoogle(PatrolIntegrationTester $) async {
   await $('Continue with Google').tap();
+  // A freshly booted/wiped emulator's Google account chooser can take a while
+  // to populate (Play Services + network), so this needs the same 30s budget
+  // as every other native/network wait in this file — the default 10s find
+  // timeout was the root cause of TC1/TC11 flakiness (404 selector).
   // ignore: deprecated_member_use
-  await $.native.tap(Selector(textContains: '@'));
+  await $.native.tap(
+    Selector(textContains: '@'),
+    timeout: const Duration(seconds: 30),
+  );
   await $.waitUntilVisible(
     $(NavigationBar),
     timeout: const Duration(seconds: 30),
