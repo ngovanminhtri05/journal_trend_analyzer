@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'admin_logs_screen.dart';
 import 'admin_remote_config_screen.dart';
+import 'admin_send_notification_screen.dart';
 import 'admin_storage_screen.dart';
 import 'admin_users_screen.dart';
 
@@ -53,6 +54,17 @@ class AdminDashboardScreen extends StatelessWidget {
             subtitle: 'Recent analytics events and crash reports',
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const AdminLogsScreen()),
+            ),
+          ),
+          const SizedBox(height: 12),
+          _AdminCard(
+            icon: Icons.campaign_outlined,
+            title: 'Send notification',
+            subtitle: 'Broadcast a push message to all users',
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const AdminSendNotificationScreen(),
+              ),
             ),
           ),
         ],

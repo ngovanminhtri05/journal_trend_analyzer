@@ -12,3 +12,4 @@ export {
   adminGetReportUrl,
   adminDeleteReport,
 } from "./storage";
+export { adminSendNotification } from "./notifications";

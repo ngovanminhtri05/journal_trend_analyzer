@@ -61,12 +61,20 @@ abstract interface class MessagingApi {
 class MessagingService implements MessagingApi {
   MessagingService({FirebaseMessaging? messaging}) : _injected = messaging;
 
+  /// FCM topic every install subscribes to, so an admin broadcast from the
+  /// admin panel (Cloud Function `adminSendNotification`) reaches all users.
+  static const String broadcastTopic = 'broadcast';
+
   final FirebaseMessaging? _injected;
   FirebaseMessaging get _messaging => _injected ?? FirebaseMessaging.instance;
 
   @override
   Future<String?> initialize() async {
     await _messaging.requestPermission();
+    // Best-effort: a failed subscription must not block token retrieval.
+    try {
+      await _messaging.subscribeToTopic(broadcastTopic);
+    } catch (_) {}
     return _messaging.getToken();
   }
 

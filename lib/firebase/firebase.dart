@@ -9,6 +9,7 @@ library;
 
 export 'admin_access_service.dart';
 export 'admin_logs_mirror.dart';
+export 'admin_messaging_service.dart';
 export 'admin_logs_service.dart';
 export 'admin_remote_config_service.dart';
 export 'admin_storage_service.dart';
