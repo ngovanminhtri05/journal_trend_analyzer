@@ -72,6 +72,8 @@ class AdminUsersViewModel extends ChangeNotifier {
     try {
       await _api.deleteUser(uid);
       users = users.where((u) => u.uid != uid).toList();
+      // Deleting the last account should show the empty state, not a blank list.
+      if (users.isEmpty) state = ViewState.empty;
     } on AdminException catch (e) {
       errorMessage = e.message;
     } finally {

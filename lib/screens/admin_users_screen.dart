@@ -8,12 +8,17 @@ import '../widgets/widgets.dart';
 
 /// Admin Users screen: list every account, disable/enable, or delete it.
 class AdminUsersScreen extends StatelessWidget {
-  const AdminUsersScreen({super.key});
+  const AdminUsersScreen({super.key, this.viewModel});
+
+  /// Injected for tests/previews; production builds the Cloud-Functions-backed
+  /// view model.
+  final AdminUsersViewModel? viewModel;
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider<AdminUsersViewModel>(
-      create: (_) => AdminUsersViewModel(AdminUsersService())..load(),
+      create: (_) =>
+          (viewModel ?? AdminUsersViewModel(AdminUsersService()))..load(),
       child: Scaffold(
         appBar: AppBar(title: const Text('Users')),
         body: Consumer<AdminUsersViewModel>(
