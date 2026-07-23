@@ -117,8 +117,9 @@ void main() {
       final analytics = _RecordingAnalytics();
       final vm = HomeViewModel(service, analytics: analytics);
 
-      await vm.search('   ');
+      await vm.load();
 
+      // The browse feed (no query) does not log a topic search.
       expect(analytics.searchTopics, isEmpty);
     });
   });

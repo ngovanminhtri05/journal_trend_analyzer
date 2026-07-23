@@ -66,7 +66,12 @@ class KeywordDetailViewModel extends ChangeNotifier {
   /// Journals most associated with the keyword, sorted by count descending.
   List<GroupByItem> relatedJournals = const [];
 
-  /// Most-cited publications tagged with the keyword.
+  /// Top publications **tagged with this keyword**, most-cited first.
+  ///
+  /// Scoped with `keywords.id` rather than a free-text search: a text search for
+  /// e.g. "Computer science" pulls in loosely-matching papers (a crystallography
+  /// tool topped that list), while the tag filter returns works OpenAlex
+  /// actually classified under the keyword.
   List<Work> relatedWorks = const [];
 
   /// FR-9 trend verdict derived from [yearCounts] (null when too little data).
@@ -87,6 +92,7 @@ class KeywordDetailViewModel extends ChangeNotifier {
         _service.groupByFilter('publication_year', filter),
         _service.groupByFilter('authorships.author.id', filter),
         _service.groupByFilter('primary_location.source.id', filter),
+        // Top papers tagged with this keyword, most-cited first.
         _service.getWorksByFilter(filter, perPage: 25),
       ]);
       yearCounts = results[0] as List<GroupByItem>;

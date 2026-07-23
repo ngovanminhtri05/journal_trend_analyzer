@@ -23,6 +23,7 @@ class OpenAlexService {
 
   static const String _host = 'api.openalex.org';
   static const String _worksPath = '/works';
+  static const String _sourcesPath = '/sources';
   static const String _subfieldsPath = '/subfields';
   static const Duration _timeout = Duration(seconds: 15);
 
@@ -70,6 +71,165 @@ class OpenAlexService {
     String keyword, {
     List<String> filters = const [],
   }) => _groupBy(keyword, 'primary_location.source.id', filters);
+
+  /// Phase 13.3 (Journals): find publication venues by **name** via `/sources`.
+  Future<List<SourceHit>> searchSources(String name, {int perPage = 25}) async {
+    final query = name.trim();
+    if (query.isEmpty) return const [];
+    final json = await _getJson(
+      _apiUri(_sourcesPath, {'search': query, 'per-page': '$perPage'}),
+    );
+    final results = json['results'];
+    if (results is! List) {
+      throw const ParseException('Missing results array in /sources.');
+    }
+    return results
+        .whereType<Map<String, dynamic>>()
+        .map(SourceHit.fromJson)
+        .where((s) => s.id.isNotEmpty)
+        .toList();
+  }
+
+  /// Phase 13.3 (Journal detail): the most recent works of a source, newest
+  /// first, with enough breadth to group into recent volumes client-side.
+  Future<List<Work>> recentWorksBySource(
+    String sourceId, {
+    int perPage = 150,
+  }) => recentWorksByEntity(
+    'primary_location.source.id',
+    sourceId,
+    perPage: perPage,
+  );
+
+  /// Phase 13.3+ (Journal detail search): works published in [sourceId] that
+  /// match a free-text [query] (a field/topic within that journal), newest
+  /// first. With no query it returns the journal's recent works.
+  Future<List<Work>> worksInSource(
+    String sourceId, {
+    String? query,
+    int perPage = 50,
+  }) async {
+    final id = shortOpenAlexId(sourceId);
+    if (id.isEmpty) return const [];
+    final params = <String, String>{
+      'filter': 'primary_location.source.id:$id',
+      'sort': 'publication_date:desc',
+      'per-page': '$perPage',
+    };
+    final q = query?.trim() ?? '';
+    if (q.isNotEmpty) params['search'] = q;
+    final json = await _getJson(_apiUri(_worksPath, params));
+    return _parseWorks(json);
+  }
+
+  /// Phase 13.2 (Home): the most recent publications for a topic/field, newest
+  /// first. No aggregation — a light, per-paper feed for the user's own field.
+  Future<List<Work>> recentWorksByTopic(
+    String topic, {
+    int perPage = 25,
+  }) async {
+    final query = topic.trim();
+    if (query.isEmpty) return const [];
+    final json = await _getJson(
+      _worksUri({
+        'search': query,
+        'sort': 'publication_date:desc',
+        'per-page': '$perPage',
+      }, const []),
+    );
+    return _parseWorks(json);
+  }
+
+  /// Phase 14.1 (Home discovery): a cursor-paginated feed of works.
+  ///
+  /// - No [query]: a browse feed ordered by [sort]. `rising` scopes to a
+  ///   recency window ([windowDays]) and orders by citations; `newest` orders by
+  ///   publication date with no lower bound.
+  /// - With [query]: a relevance-ranked search (`relevance_score:desc`, all
+  ///   time — no recency window).
+  ///
+  /// [subfieldId] (full or short OpenAlex id) scopes to
+  /// `primary_topic.subfield.id`. [sourceIds] scopes to a set of venues
+  /// (OR-joined) — used to show only the journals the user follows.
+  /// [cursor] threads OpenAlex cursor pagination — pass null for the first page
+  /// (primed with `*`), then feed back [WorksPage.nextCursor]. No new HTTP client.
+  Future<WorksPage> discoverWorks({
+    String? query,
+    String? subfieldId,
+    List<String> sourceIds = const [],
+    WorkSort sort = WorkSort.rising,
+    int windowDays = 365,
+    String? cursor,
+    int perPage = 25,
+  }) async {
+    final q = query?.trim() ?? '';
+    final isSearch = q.isNotEmpty;
+
+    final filters = <String>[];
+    // Recency window applies only to the browse feed (search spans all time).
+    final windowed = !isSearch && sort == WorkSort.rising && windowDays > 0;
+    if (windowed) {
+      final since = DateTime.now().subtract(Duration(days: windowDays));
+      filters.add('from_publication_date:${_isoDate(since)}');
+    }
+    // Never surface future-dated records. OpenAlex holds placeholder /
+    // "forthcoming" publication dates (2050-01-01 and similar) which would
+    // otherwise dominate the `newest` sort.
+    filters.add('to_publication_date:${_isoDate(DateTime.now())}');
+    final subId = subfieldId == null ? '' : shortOpenAlexId(subfieldId);
+    if (subId.isNotEmpty) filters.add('primary_topic.subfield.id:$subId');
+    // Followed venues: OpenAlex ORs values within one filter clause with `|`.
+    final sources = sourceIds
+        .map(shortOpenAlexId)
+        .where((id) => id.isNotEmpty)
+        .toList();
+    if (sources.isNotEmpty) {
+      filters.add('primary_location.source.id:${sources.join('|')}');
+    }
+
+    final sortKey = isSearch
+        ? 'relevance_score:desc'
+        : (sort == WorkSort.newest
+              ? 'publication_date:desc'
+              : 'cited_by_count:desc');
+
+    final json = await _getJson(
+      _apiUri(_worksPath, {
+        'sort': sortKey,
+        'per-page': '$perPage',
+        'cursor': cursor ?? '*',
+        if (filters.isNotEmpty) 'filter': filters.join(','),
+        if (isSearch) 'search': q,
+      }),
+    );
+
+    final meta = json['meta'];
+    final nextCursor = (meta is Map) ? meta['next_cursor'] as String? : null;
+    return WorksPage(works: _parseWorks(json), nextCursor: nextCursor);
+  }
+
+  /// Formats a date as `YYYY-MM-DD` for OpenAlex `from_publication_date`.
+  static String _isoDate(DateTime d) {
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${d.year}-${two(d.month)}-${two(d.day)}';
+  }
+
+  /// Phase 13.2 (Home): **trending** publications — recently published *and*
+  /// highly cited (recent citation momentum). Global by default; pass [field] to
+  /// scope the trend to a topic. No aggregate totals — just the papers.
+  Future<List<Work>> trendingWorks({String? field, int perPage = 25}) async {
+    final since = DateTime.now().subtract(const Duration(days: 365 * 2));
+    final fromDate = '${since.year}-01-01';
+    final params = <String, String>{
+      'filter': 'from_publication_date:$fromDate',
+      'sort': 'cited_by_count:desc',
+      'per-page': '$perPage',
+    };
+    final query = field?.trim() ?? '';
+    if (query.isNotEmpty) params['search'] = query;
+    final json = await _getJson(_apiUri(_worksPath, params));
+    return _parseWorks(json);
+  }
 
   /// FR-6: publication counts per author.
   Future<List<GroupByItem>> groupByAuthor(

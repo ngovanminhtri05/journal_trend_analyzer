@@ -160,7 +160,8 @@ class _JournalTrendAppState extends State<JournalTrendApp> {
       providers: [
         Provider<OpenAlexService>.value(value: _service),
         Provider<AnalyticsApi>.value(value: _analytics),
-        Provider<RemoteConfigApi>.value(value: _remoteConfig),
+        // Listenable so real-time Remote Config pushes rebuild the UI live.
+        ListenableProvider<RemoteConfigApi>.value(value: _remoteConfig),
         Provider<CrashReporterApi>.value(value: _crashReporter),
         Provider<AdminAccessApi>.value(value: _adminAccess),
         ChangeNotifierProvider(create: (_) => FilterProvider(_service)),
@@ -171,10 +172,19 @@ class _JournalTrendAppState extends State<JournalTrendApp> {
         ChangeNotifierProvider(
           create: (_) => BookmarkProvider(_bookmarkService),
         ),
+        // Phase 13.1: the user's chosen research field (persisted; Profile).
+        ChangeNotifierProvider(create: (_) => ResearchFieldProvider()..load()),
+        // Phase 14.2: OpenAlex subfield taxonomy + Home feed filter selection.
+        ChangeNotifierProvider(create: (_) => SubfieldFilterProvider(_service)),
         // Lab 03 tab ViewModels (Home / Journals / Keywords).
         ChangeNotifierProvider(
-          create: (_) =>
-              HomeViewModel(_service, analytics: _analytics, storage: _storage),
+          create: (ctx) => HomeViewModel(
+            _service,
+            analytics: _analytics,
+            storage: _storage,
+            remoteConfig: _remoteConfig,
+            bookmarks: ctx.read<BookmarkProvider>(),
+          ),
         ),
         ChangeNotifierProvider(create: (_) => JournalsViewModel(_service)),
         ChangeNotifierProvider(create: (_) => KeywordsViewModel(_service)),

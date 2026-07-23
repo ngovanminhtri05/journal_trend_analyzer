@@ -106,12 +106,12 @@ Lab 03 changes the product significantly:
 
 | Task | 内容 | DoD | Depends | Status |
 |------|------|-----|---------|--------|
-| 10.1 | Patrol setup (patrol CLI + integration_test + android config) `[tdd:skip:config]` | `patrol test` runs a smoke test | 3.1 | cc:done — `patrol test` **runs green on the emulator**: smoke test `app_test.dart` (4-tab shell boot) = 1/1 passed. The earlier Windows `d:/` / `Invalid depfile` build failure was fixed by upgrading **patrol → 4.7.1 + patrol_cli → 4.5.1** and updating `MainActivityTest.java` to `@RunWith(Parameterized.class)` (patrol 4.7 API). NOTE: emulator needs free storage (the debug/test APKs are large — wipe if `INSTALL_FAILED_INSUFFICIENT_STORAGE`); network-driven feature tests (TC2–TC10) need a stable emulator connection + may need longer waits. |
-| 10.2 | TC1 Google Sign-In; TC11 Logout (`authentication_test.dart`) `[tdd:required]` | Sign-in→Home; logout→Login | 10.1, 2.3 | cc:done (written) — real auth gate + native Google chooser via `signInWithGoogle` helper; analyze-clean. Run blocked by the 10.1 Windows toolchain bug. |
-| 10.3 | TC2 Search; TC3 Publication detail (`publication_test.dart`) `[tdd:required]` | Results shown; detail fields shown | 10.1, 5.1 | cc:done (written) |
-| 10.4 | TC4 Journals nav; TC5 Journal detail (`journal_test.dart`) `[tdd:required]` | Lists/stats shown; detail shown | 10.1, 6.2 | cc:done (written) |
-| 10.5 | TC6 Keywords nav; TC7 Keyword detail (`keyword_test.dart`) `[tdd:required]` | Lists/stats shown; analysis shown | 10.1, 7.2 | cc:done (written) |
-| 10.6 | TC8 Profile nav; TC9 PDF export+upload; TC10 Remote Config (`profile_test.dart`/`export_test.dart`) `[tdd:required]` | Each verifies its screen/result | 10.1, 8.3, 8.4 | cc:done (written) — TC8/TC10 use a fake signed-in shell (deterministic); TC9 uses real sign-in for the Storage upload. Run blocked by 10.1. |
+| 10.1 | Patrol setup (patrol CLI + integration_test + android config) `[tdd:skip:config]` | `patrol test` runs a smoke test | 3.1 | cc:done — `patrol test` **runs green on the emulator**: smoke test `app_test.dart` (4-tab shell boot) = 1/1 passed. The earlier Windows `d:/` / `Invalid depfile` build failure was fixed by upgrading **patrol → 4.7.1 + patrol_cli → 4.5.1** and updating `MainActivityTest.java` to `@RunWith(Parameterized.class)` (patrol 4.7 API). NOTE: emulator needs free storage (the debug/test APKs are large — wipe if `INSTALL_FAILED_INSUFFICIENT_STORAGE`); network-driven feature tests (TC2–TC10) need a stable emulator connection + may need longer waits. **Update 2026-07-17: the FULL suite (smoke + TC1–TC11, all 12 cases) now runs 12/12 GREEN in one run (7m 53s), including the two Google-auth cases with a real account.** Evidence report: `docs/patrol-evidence/patrol-e2e-report.html`. |
+| 10.2 | TC1 Google Sign-In; TC11 Logout (`authentication_test.dart`) `[tdd:required]` | Sign-in→Home; logout→Login | 10.1, 2.3 | cc:done — **runs GREEN** (2026-07-17) with a real Google account (`ngovanminhtri05@gmail.com`) added to the emulator. TC1 40s (cold sign-in wait raised to 60s for Firebase auth + RemoteConfig splash); TC11 26s (scrolls the Sign-out button into view). |
+| 10.3 | TC2 Search; TC3 Publication detail (`publication_test.dart`) `[tdd:required]` | Results shown; detail fields shown | 10.1, 5.1 | cc:done — **runs GREEN** on emulator-5554 (2026-07-17, live OpenAlex). TC3 opens the detail from a journal's chart-free most-cited list (deterministic). Evidence: `docs/patrol-evidence/patrol-e2e-report.html`. |
+| 10.4 | TC4 Journals nav; TC5 Journal detail (`journal_test.dart`) `[tdd:required]` | Lists/stats shown; detail shown | 10.1, 6.2 | cc:done — **runs GREEN** (2026-07-17). Wait anchors on the success-only `StatCard` (labels render upper-cased). |
+| 10.5 | TC6 Keywords nav; TC7 Keyword detail (`keyword_test.dart`) `[tdd:required]` | Lists/stats shown; analysis shown | 10.1, 7.2 | cc:done — **runs GREEN** (2026-07-17). |
+| 10.6 | TC8 Profile nav; TC9 PDF export+upload; TC10 Remote Config (`profile_test.dart`/`export_test.dart`) `[tdd:required]` | Each verifies its screen/result | 10.1, 8.3, 8.4 | cc:done — **runs GREEN** (2026-07-17). TC8/TC10 use a fake signed-in shell; TC9 exercises the export+share on the auth-bypassed shell. TC8 scrolls the Sign-out button into view. |
 
 ## Phase 11: AI code review
 
@@ -126,6 +126,59 @@ Lab 03 changes the product significantly:
 | 12.1 | Report 5–10 pages (overview, architecture/MVVM, Firebase design, screenshots, analytics events, crashlytics, remote config, patrol results, AI review, challenges, lessons) `[tdd:skip:docs]` | Report covers all rubric sections | Phase 10, 11 | cc:done (draft) — `docs/REPORT-Lab03.md` covers every rubric section with screenshot slots. Insert screenshots + fill name/StudentID + export to PDF. |
 | 12.2 | **R5** Demo video 5–10 min (all features) `[tdd:skip:docs]` | Video covers the required list | Phase 8–10 | cc:todo |
 | 12.3 | **R4** Repo finalize: rename `PRM393_Lab03_<StudentID>`, include firebase config + patrol scripts + assets `[tdd:skip:config]` | Repo matches deliverable structure | all | cc:todo |
+
+---
+
+## Phase 13: Tab redesign per instructor (2026-07-17)
+
+Instructor re-scope of the 4 tabs. Decisions: Home field = **user-chosen, stored locally**;
+Firebase demos (Remote Config/Notifications) **kept** in a small Profile section (rubric safety).
+
+| Task | 内容 | DoD | Status |
+|------|------|-----|--------|
+| 13.1 | `ResearchFieldProvider` — user picks/edits their research field, persisted (shared_preferences) | Field survives restart; editable on Profile | cc:done |
+| 13.2 | **Home**: light overview of **recent publications in the user's field** — no OpenAlex sums/aggregates | Field prompt if unset; recent papers list; tap→detail; no totals | cc:done — `HomeViewModel.loadForField` + `recentWorksByTopic`; export kept (recent-papers PDF). |
+| 13.3 | **Journals**: search a journal **by name** (`/sources?search=`) → detail → **recent volumes** → **articles in a volume** | Name search; volumes grouped (biblio.volume, year fallback); articles per volume | cc:done — `searchSources` + `recentWorksBySource` + `groupWorksIntoVolumes`; ExpansionTile per volume. |
+| 13.4 | **Keywords**: enter/search a keyword → its analysis (reuse trend/authors/journals/works) | Direct keyword → analysis | cc:done — hint reworded; existing analysis flow retained. |
+| 13.5 | **Profile**: User + **Bookmark list** + Crashlytics test button; keep Remote Config/Notifications in a small section | Bookmarks shown; field editor; Crashlytics; FB demos retained | cc:done — `_BookmarksSection` + `_ResearchFieldCard`; FB demos under a "Firebase demos" section. |
+| 13.6 | Update unit tests + Patrol E2E to the new UI | analyze clean; unit tests pass; Patrol updated | cc:wip — **`flutter analyze` clean; 121 unit/widget tests pass.** Patrol E2E still asserts the OLD UI (topic-search Home, "Top journals", etc.) → **needs rewrite + on-device rerun** for the new flows. |
+
+---
+
+## Phase 14: Home discovery redesign (planned 2026-07-19)
+
+**Spec delta (Home behavior — product contract).** Home becomes a research-discovery
+feed (no OpenAlex aggregate totals):
+
+- **Default = "Rising" feed:** recent works ordered by citations — recent papers already
+  gaining traction. Query: `filter=from_publication_date:<window>` (default last 12 months)
+  `+ sort=cited_by_count:desc`. ("Up-rising" is a proxy — OpenAlex has no native trending.)
+- **Sort toggle:** `Rising` (default) · `Newest` (`publication_date:desc`) · `Top cited`
+  (2-yr window + `cited_by_count:desc`).
+- **Search papers:** a search bar; with a query, `search=q` + `sort=relevance_score:desc`,
+  respecting the active subfield filter.
+- **Subfield filter:** pick an OpenAlex subfield (Domain→Field→Subfield) → adds
+  `primary_topic.subfield.id:<shortId>`; shown as a removable chip. **Reuse** `getSubfields()`,
+  `FilterProvider`, `widgets/filter_panel.dart`.
+- **Pagination:** cursor-based load-more (`cursor=*`→`next_cursor`, per_page 25).
+- Reuse: single `OpenAlexService` client, `PaperCard`, state views. The old free-text field
+  filter is replaced by search + subfield filter (`ResearchFieldProvider` may seed a default
+  subfield or move to Profile-only).
+
+**Validation:** `team_validation_mode: manual-pass` (no subagents). Product/Architecture/
+Security/QA/Skeptic reviewed by the planner. OpenAlex query design cross-checked against
+current API docs (sort keys, `primary_topic.subfield.id`, cursor paging). No secrets/permissions/
+billing impact (OpenAlex is public; mailto already set). lint/format baseline exists
+(`flutter analyze` enforced) — no setup task needed.
+
+| Task | 内容 | DoD | Depends | Status |
+|------|------|-----|---------|--------|
+| 14.1 | `OpenAlexService.discoverWorks({query, subfieldId, WorkSort sort, windowDays, cursor})` — builds `from_publication_date`+`primary_topic.subfield.id` filters, sort, `search`, cursor paging; returns page + `nextCursor`. No new HTTP client. `[tdd:required]` | Unit tests assert the exact query params for each sort / filter / search combo + cursor threading; analyze clean | - | cc:done [dc0f9b7] — `WorkSort` enum + `WorksPage` model; 6 TDD tests (Red→Green); analyze clean, 128 tests pass. |
+| 14.2 | Subfield source: cache `getSubfields()`; reuse/extend `FilterProvider` to expose the selected subfield + its `primary_topic.subfield.id` clause. `[tdd:required]` | Unit test: selecting a subfield yields the right clause; list cached once | 14.1 | cc:done [7b1628a] — new `SubfieldFilterProvider` (focused; caches once); 3 TDD tests. |
+| 14.3 | `HomeViewModel`: Rising default, sort switch, search, subfield filter, pagination state (append/hasMore/loadingMore/refresh). `[tdd:required]` | Unit tests: state transitions per sort/search/filter; load-more appends; error/empty | 14.1, 14.2 | cc:done [0debab7] — 8 TDD tests (rising/newest/search/subfield/loadMore/empty/error). |
+| 14.4 | `HomeScreen` UI: search bar + sort segmented control + subfield filter chip & searchable subfield picker + feed + load-more + pull-to-refresh + loading/empty/error. `[tdd:skip:ui]` | Renders each state; tapping sort/filter/search reloads; scroll loads more | 14.3 | cc:done [0debab7] — `SegmentedButton` sort, `InputChip` + bottom-sheet picker, `RefreshIndicator`, infinite scroll. |
+| 14.5 | Wire export + analytics to the new feed; provide `SubfieldFilterProvider`. `[tdd:skip:ui]` | Export/analytics still fire; no dead code; analyze clean | 14.3 | cc:done [0debab7] — Export PDF kept (reports current feed); analytics on search. `ResearchFieldProvider` kept for Profile (no longer drives Home). |
+| 14.6 | Update unit + widget tests green (Patrol deferred per request). `[tdd:required]` | `flutter analyze` clean; `flutter test` green | 14.1–14.5 | cc:done — **analyze clean; 133 unit/widget tests pass.** Patrol E2E deferred (user request); still targets old Home. |
 
 ---
 

@@ -4,10 +4,9 @@ import '../services/services.dart';
 
 /// Visual badge for a topic's trend classification (FR-9).
 ///
-/// Maps a [TrendClassification] to a colored pill with an emoji, a Vietnamese
-/// label, and a tooltip explaining *why* the topic was classified that way. All
-/// Vietnamese, color and icon choices live here so the classifier stays a pure,
-/// UI-agnostic helper.
+/// Maps a [TrendClassification] to a colored pill with a label and a tooltip
+/// explaining *why* the topic was classified that way. All copy and color
+/// choices live here so the classifier stays a pure, UI-agnostic helper.
 ///
 /// Set [dense] for tight contexts (e.g. the comparison table) to drop the
 /// padding and shrink the text.
@@ -52,19 +51,19 @@ class TrendBadge extends StatelessWidget {
     switch (category) {
       case TrendCategory.emerging:
         return const _BadgeStyle(
-          label: 'Đang lên',
+          label: 'Rising',
           foreground: Color(0xFF1B7F4B),
           background: Color(0xFFE3F4EA),
         );
       case TrendCategory.mature:
         return const _BadgeStyle(
-          label: 'Bão hòa',
+          label: 'Saturating',
           foreground: Color(0xFF8A6D1A),
           background: Color(0xFFF6EFD9),
         );
       case TrendCategory.declining:
         return const _BadgeStyle(
-          label: 'Đang giảm',
+          label: 'Declining',
           foreground: Color(0xFF9F2F2D),
           background: Color(0xFFF7E4E3),
         );
@@ -74,11 +73,13 @@ class TrendBadge extends StatelessWidget {
   String _tooltipFor(TrendCategory category, int pct, String range) {
     switch (category) {
       case TrendCategory.emerging:
-        return 'Giai đoạn $range: số công bố tăng ~$pct%/năm → chủ đề đang lên.';
+        return 'Over $range, publications grew ~$pct%/year — the topic is rising.';
       case TrendCategory.mature:
-        return 'Giai đoạn $range: số công bố gần như đi ngang (~$pct%/năm) → đã bão hòa.';
+        return 'Over $range, publications stayed roughly flat (~$pct%/year) — '
+            'the topic has saturated.';
       case TrendCategory.declining:
-        return 'Giai đoạn $range: số công bố giảm ~$pct%/năm → chủ đề đang giảm.';
+        return 'Over $range, publications fell ~$pct%/year — the topic is '
+            'declining.';
     }
   }
 }

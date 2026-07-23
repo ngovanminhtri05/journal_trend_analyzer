@@ -8,8 +8,8 @@ import 'package:journal_trend_analyzer/firebase/storage_service.dart';
 import 'package:journal_trend_analyzer/models/models.dart';
 import 'package:journal_trend_analyzer/services/openalex_service.dart';
 import 'package:journal_trend_analyzer/services/report_builder.dart';
-import 'package:journal_trend_analyzer/viewmodels/dashboard_provider.dart';
 import 'package:journal_trend_analyzer/viewmodels/home_viewmodel.dart';
+import 'package:journal_trend_analyzer/viewmodels/view_state.dart';
 
 class _FakeStorage implements ReportStorageApi {
   String? uploadedUid;
@@ -49,14 +49,22 @@ class _RecordingAnalytics implements AnalyticsApi {
   Future<void> logViewKeyword(String keyword) async {}
 }
 
-const _summary = DashboardSummary(
-  totalPublications: 120,
-  averageCitations: 8.5,
-  mostActiveYear: 2021,
-  topJournal: 'Nature',
-  topAuthor: 'Ada Lovelace',
-  mostInfluential: null,
-);
+final _works = <Work>[
+  const Work(
+    id: 'W1',
+    title: 'A great paper',
+    publicationYear: 2021,
+    citedByCount: 40,
+    authors: <Author>[],
+  ),
+  const Work(
+    id: 'W2',
+    title: 'Another paper',
+    publicationYear: 2020,
+    citedByCount: 30,
+    authors: <Author>[],
+  ),
+];
 
 OpenAlexService _unusedService() => OpenAlexService(
   client: MockClient((_) async => http.Response('{}', 200)),
@@ -103,8 +111,9 @@ void main() {
               storage: storage,
               saveReport: fakeSaver,
             )
-            ..lastQuery = 'quantum'
-            ..summary = _summary;
+            ..query = 'quantum'
+            ..works = _works
+            ..state = ViewState.success;
 
       await vm.exportReport(uid: 'user-1');
 
@@ -144,8 +153,9 @@ void main() {
               storage: storage,
               saveReport: fakeSaver,
             )
-            ..lastQuery = 'quantum'
-            ..summary = _summary;
+            ..query = 'quantum'
+            ..works = _works
+            ..state = ViewState.success;
 
       await vm.exportReport(uid: 'user-1');
 
@@ -157,8 +167,9 @@ void main() {
 
     test('exports locally with no Storage configured at all', () async {
       final vm = HomeViewModel(_unusedService(), saveReport: fakeSaver)
-        ..lastQuery = 'quantum'
-        ..summary = _summary;
+        ..query = 'quantum'
+        ..works = _works
+        ..state = ViewState.success;
 
       await vm.exportReport(uid: 'anonymous');
 
@@ -173,8 +184,9 @@ void main() {
               _unusedService(),
               saveReport: (bytes, name) async => throw Exception('disk full'),
             )
-            ..lastQuery = 'quantum'
-            ..summary = _summary;
+            ..query = 'quantum'
+            ..works = _works
+            ..state = ViewState.success;
 
       await vm.exportReport(uid: 'user-1');
 

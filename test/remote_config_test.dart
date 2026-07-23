@@ -5,6 +5,8 @@ import 'package:mocktail/mocktail.dart';
 
 class _MockRemoteConfig extends Mock implements FirebaseRemoteConfig {}
 
+class _MockValue extends Mock implements RemoteConfigValue {}
+
 void main() {
   setUpAll(() {
     registerFallbackValue(
@@ -37,18 +39,42 @@ void main() {
       rc = _MockRemoteConfig();
       when(() => rc.setConfigSettings(any())).thenAnswer((_) async {});
       when(() => rc.setDefaults(any())).thenAnswer((_) async {});
+      // Stubs for the diagnostics added to initialize().
+      final value = _MockValue();
+      when(() => value.source).thenReturn(ValueSource.valueRemote);
+      when(() => rc.getValue(any())).thenReturn(value);
+      when(() => rc.lastFetchStatus).thenReturn(RemoteConfigFetchStatus.success);
+      // Real-time updates channel (no events in these tests).
+      when(
+        () => rc.onConfigUpdated,
+      ).thenAnswer((_) => const Stream<RemoteConfigUpdate>.empty());
+      when(() => rc.activate()).thenAnswer((_) async => true);
     });
 
     test('caches the fetched server values', () async {
       when(() => rc.fetchAndActivate()).thenAnswer((_) async => true);
       when(() => rc.getInt('max_journals')).thenReturn(30);
       when(() => rc.getInt('max_keywords')).thenReturn(40);
+      when(() => rc.getInt('home_page_size')).thenReturn(50);
 
       final service = RemoteConfigService(remoteConfig: rc);
       await service.initialize();
 
       expect(service.maxJournals, 30);
       expect(service.maxKeywords, 40);
+      expect(service.homePageSize, 50);
+    });
+
+    test('clamps an out-of-range home page size', () async {
+      when(() => rc.fetchAndActivate()).thenAnswer((_) async => true);
+      when(() => rc.getInt('max_journals')).thenReturn(15);
+      when(() => rc.getInt('max_keywords')).thenReturn(20);
+      when(() => rc.getInt('home_page_size')).thenReturn(9999); // > OpenAlex max
+
+      final service = RemoteConfigService(remoteConfig: rc);
+      await service.initialize();
+
+      expect(service.homePageSize, RemoteConfigService.maxHomePageSize);
     });
 
     test('keeps defaults when fetchAndActivate throws', () async {
@@ -61,6 +87,9 @@ void main() {
       when(
         () => rc.getInt('max_keywords'),
       ).thenReturn(RemoteConfigService.defaultMaxKeywords);
+      when(
+        () => rc.getInt('home_page_size'),
+      ).thenReturn(RemoteConfigService.defaultHomePageSize);
 
       final service = RemoteConfigService(remoteConfig: rc);
       await service.initialize(); // must not rethrow

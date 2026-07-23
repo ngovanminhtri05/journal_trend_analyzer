@@ -59,19 +59,10 @@ Future<void> pumpRealApp(PatrolIntegrationTester $) async {
 /// account already added to the device.
 Future<void> signInWithGoogle(PatrolIntegrationTester $) async {
   await $('Continue with Google').tap();
-  // A freshly booted/wiped emulator's Google account chooser can take a while
-  // to populate (Play Services + network), so this needs the same 30s budget
-  // as every other native/network wait in this file — the default 10s find
-  // timeout was the root cause of TC1/TC11 flakiness (404 selector).
   // ignore: deprecated_member_use
-  await $.native.tap(
-    Selector(textContains: '@'),
-    timeout: const Duration(seconds: 30),
-  );
-  // HANDOFF.md documents cold start alone taking up to ~40s (RemoteConfig
-  // fetchAndActivate blocks runApp) — clearPackageData between test cases
-  // means every sign-in here is a cold start, so 30s wasn't a safe margin
-  // above that documented ceiling. 60s leaves real headroom.
+  await $.native.tap(Selector(textContains: '@'));
+  // The first cold sign-in also runs Firebase auth + the startup RemoteConfig
+  // fetch (up to a 10s timeout) before the shell renders, so allow generously.
   await $.waitUntilVisible(
     $(NavigationBar),
     timeout: const Duration(seconds: 60),
@@ -91,6 +82,22 @@ Future<void> searchTopic(PatrolIntegrationTester $, String query) async {
   await $(Icons.arrow_forward).tap();
   await $.pump(const Duration(seconds: 1));
   await $.waitUntilVisible($(Scaffold), timeout: const Duration(seconds: 30));
+}
+
+/// Reveals [target] by dragging the visible tab's list upward from a point
+/// **below** the header/chart, so an interactive [YearBarChart] can't swallow
+/// the scroll gesture (its touch layer sits at the viewport centre). Returns as
+/// soon as [target] is hit-testable — a no-op when it is already on screen.
+Future<void> revealByScrolling(
+  PatrolIntegrationTester $,
+  PatrolFinder target, {
+  int maxDrags = 12,
+}) async {
+  for (var i = 0; i < maxDrags; i++) {
+    if (target.hitTestable().exists) return;
+    await $.tester.dragFrom(const Offset(180, 640), const Offset(0, -260));
+    await $.pumpAndSettle();
+  }
 }
 
 /// A stand-in [AuthApi] that reports one already-signed-in user, for tests that

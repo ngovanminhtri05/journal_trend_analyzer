@@ -23,7 +23,7 @@ class KeywordsScreen extends StatelessWidget {
     return Column(
       children: [
         TopicSearchBar(
-          hintText: 'Frequent keywords for a topic (e.g. Genomics)',
+          hintText: 'Analyze a research keyword (e.g. Genomics)',
           onSubmit: (q) => context.read<KeywordsViewModel>().load(q),
         ),
         Expanded(child: _buildBody(context, vm)),
@@ -51,7 +51,8 @@ class KeywordsScreen extends StatelessWidget {
         final theme = Theme.of(context);
         final maxCount = vm.keywords.first.count;
         // Remote Config (task 8.4): the list length is server-tunable.
-        final maxKeywords = context.read<RemoteConfigApi>().maxKeywords;
+        // watch (not read) so a real-time Remote Config push re-limits the list.
+        final maxKeywords = context.watch<RemoteConfigApi>().maxKeywords;
         return ListView(
           padding: const EdgeInsets.all(16),
           children: [
@@ -202,6 +203,28 @@ class KeywordDetailScreen extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
+            // Top papers containing the keyword — shown first (Phase 13.4+).
+            Text('Top publications', style: theme.textTheme.titleSmall),
+            const SizedBox(height: 8),
+            if (vm.relatedWorks.isEmpty)
+              Text(
+                'No publications found for this keyword.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.outline,
+                ),
+              )
+            else
+              for (var i = 0; i < vm.relatedWorks.length; i++)
+                PaperCard(
+                  work: vm.relatedWorks[i],
+                  rank: i + 1,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => DetailScreen(work: vm.relatedWorks[i]),
+                    ),
+                  ),
+                ),
+            const SizedBox(height: 16),
             Text('Publications over time', style: theme.textTheme.titleSmall),
             const SizedBox(height: 8),
             YearBarChart(data: vm.yearCounts),
@@ -222,23 +245,13 @@ class KeywordDetailScreen extends StatelessWidget {
               limit: 10,
               onItemTap: (item) => Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (_) => JournalDetailScreen(journal: item),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text('Most cited publications', style: theme.textTheme.titleSmall),
-            const SizedBox(height: 8),
-            for (var i = 0; i < vm.relatedWorks.length; i++)
-              PaperCard(
-                work: vm.relatedWorks[i],
-                rank: i + 1,
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => DetailScreen(work: vm.relatedWorks[i]),
+                  builder: (_) => JournalDetailScreen(
+                    sourceId: item.key,
+                    title: item.keyDisplayName,
                   ),
                 ),
               ),
+            ),
           ],
         );
     }

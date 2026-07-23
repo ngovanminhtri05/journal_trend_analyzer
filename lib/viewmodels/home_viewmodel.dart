@@ -1,109 +1,154 @@
 import 'package:flutter/foundation.dart';
 
 import '../firebase/analytics_service.dart';
+import '../firebase/remote_config_service.dart';
 import '../firebase/storage_service.dart';
 import '../models/models.dart';
 import '../services/openalex_service.dart';
 import '../services/report_builder.dart';
 import '../services/report_file_saver.dart';
-import '../services/trend_classifier.dart';
-import '../utils/utils.dart';
-import 'dashboard_provider.dart' show DashboardSummary;
+import 'bookmark_provider.dart';
 import 'view_state.dart';
 
-/// Drives the Home overview screen (Lab 03).
+/// Drives the Home discovery feed (Phase 14.3).
 ///
-/// A single topic search fans out — via `Future.wait` — to a count query, three
-/// `group_by` aggregations, and the top-cited list, then combines them into a
-/// [DashboardSummary] plus the per-year buckets that feed the trend chart.
-/// The View binds to this; it holds no business logic of its own.
+/// A cursor-paginated feed of works with a [sort] toggle (rising / newest /
+/// top-cited), an optional free-text [query] (relevance search) and an optional
+/// [subfieldId] filter. No OpenAlex aggregate totals. The PDF export
+/// (Storage/Analytics demo, task 8.3) is kept, producing a report from the
+/// current feed.
 class HomeViewModel extends ChangeNotifier {
   HomeViewModel(
     this._service, {
     AnalyticsApi? analytics,
     ReportStorageApi? storage,
     ReportFileSaver? saveReport,
+    RemoteConfigApi? remoteConfig,
+    BookmarkProvider? bookmarks,
   }) : _analytics = analytics,
        _storage = storage,
-       _saveReport = saveReport ?? saveReportToTemp;
+       _saveReport = saveReport ?? saveReportToTemp,
+       _remoteConfig = remoteConfig,
+       _bookmarks = bookmarks {
+    // Real-time Remote Config: reload when the server changes the page size.
+    _remoteConfig?.addListener(_onRemoteConfigChanged);
+    // Following/unfollowing a journal changes what the Newest feed shows.
+    _bookmarks?.addListener(_onFollowsChanged);
+  }
 
   final OpenAlexService _service;
   final AnalyticsApi? _analytics;
   final ReportStorageApi? _storage;
   final ReportFileSaver _saveReport;
+  final RemoteConfigApi? _remoteConfig;
+  final BookmarkProvider? _bookmarks;
+
+  /// Full ids of the journals the user follows (a journal bookmark == a follow).
+  List<String> get followedJournalIds =>
+      _bookmarks?.byType(BookmarkType.journal).map((b) => b.id).toList() ??
+      const [];
+
+  /// How many journals the Newest feed is currently scoped to (0 = global).
+  int get followedJournalCount => followedJournalIds.length;
+
+  /// The follow set the current feed was loaded with (to detect changes).
+  List<String>? _appliedFollows;
+
+  void _onFollowsChanged() {
+    // Only the Newest feed is scoped by follows.
+    if (sort != WorkSort.newest || _appliedFollows == null) return;
+    if (state == ViewState.loading || loadingMore) return;
+    final now = followedJournalIds;
+    final changed =
+        now.length != _appliedFollows!.length ||
+        !now.every(_appliedFollows!.contains);
+    if (changed) load();
+  }
+
+  /// How many works to fetch per page — server-tunable via Remote Config
+  /// (`home_page_size`), falling back to the in-code default.
+  int get pageSize =>
+      _remoteConfig?.homePageSize ?? RemoteConfigService.defaultHomePageSize;
+
+  /// The page size the current feed was loaded with (to detect config changes).
+  int? _appliedPageSize;
+
+  void _onRemoteConfigChanged() {
+    // Only refetch when the size actually changed and we're not mid-load.
+    if (_appliedPageSize == null || pageSize == _appliedPageSize) return;
+    if (state == ViewState.loading || loadingMore) return;
+    load();
+  }
+
+  @override
+  void dispose() {
+    _remoteConfig?.removeListener(_onRemoteConfigChanged);
+    _bookmarks?.removeListener(_onFollowsChanged);
+    super.dispose();
+  }
 
   ViewState state = ViewState.idle;
   String? errorMessage;
-  String lastQuery = '';
 
-  /// PDF-report export state (task 8.3). [reportFilePath] is the locally-saved
-  /// PDF (always produced, no backend needed); [reportUrl] is the Storage
-  /// download URL when the best-effort cloud upload succeeds (needs Storage
-  /// enabled); [exportError] is a user-facing failure message.
+  /// Current ordering of the feed.
+  WorkSort sort = WorkSort.rising;
+
+  /// Free-text search term (empty = browse feed).
+  String query = '';
+
+  /// Selected subfield filter (short OpenAlex id), or null when unfiltered.
+  String? subfieldId;
+
+  /// The loaded page(s) of works.
+  List<Work> works = const [];
+
+  String? _nextCursor;
+  bool loadingMore = false;
+
+  /// Whether another page can be loaded.
+  bool get hasMore => _nextCursor != null;
+
+  /// PDF-report export state (task 8.3).
   bool isExporting = false;
   String? reportFilePath;
   String? reportUrl;
   String? exportError;
 
-  /// Whether a report can be exported right now (a successful overview loaded
-  /// and no export already running). Local export needs no Storage.
-  bool get canExport => state == ViewState.success && summary != null;
+  bool get canExport => state == ViewState.success && works.isNotEmpty;
 
-  /// The six aggregate insights (total / avg citations / most-active year /
-  /// top journal / top author / most-influential paper).
-  DashboardSummary? summary;
+  /// Recency window (days) for the browse feed: a longer window for "top cited".
+  /// Recency window for the Rising feed (ignored by Newest).
+  static const int _risingWindowDays = 365;
 
-  /// Raw `group_by=publication_year` buckets, kept for the trend chart and the
-  /// FR-9 trend verdict.
-  List<GroupByItem> yearCounts = const [];
-
-  /// FR-9 trend verdict derived from [yearCounts] (null when too little data).
-  TrendClassification? get trendClassification => classifyTrend(yearCounts);
-
-  Future<void> search(String keyword) async {
-    final query = keyword.trim();
-    if (query.isEmpty) return;
-
-    lastQuery = query;
+  /// Loads the first page for the current [sort] / [query] / [subfieldId].
+  Future<void> load() async {
     state = ViewState.loading;
     errorMessage = null;
+    works = const [];
+    _nextCursor = null;
     notifyListeners();
 
-    // Analytics: search_topic{keyword}. Fire-and-forget; never blocks the fetch
-    // and never surfaces as an unhandled async error.
-    _analytics?.logSearchTopic(query).ignore();
+    // Analytics: log a topic search when the feed is a query search.
+    if (query.isNotEmpty) _analytics?.logSearchTopic(query).ignore();
 
+    _appliedPageSize = pageSize;
+    // Newest is scoped to the journals the user follows (empty = global).
+    final follows = sort == WorkSort.newest
+        ? followedJournalIds
+        : const <String>[];
+    _appliedFollows = follows;
     try {
-      final results = await Future.wait([
-        _service.getTotalCount(query),
-        _service.groupByYear(query),
-        _service.groupByJournal(query),
-        _service.groupByAuthor(query),
-        _service.getTopCited(query),
-      ]);
-
-      final total = results[0] as int;
-      final years = results[1] as List<GroupByItem>;
-      final journals = results[2] as List<GroupByItem>;
-      final authors = results[3] as List<GroupByItem>;
-      final topCited = results[4] as List<Work>;
-
-      yearCounts = years;
-
-      if (total == 0) {
-        summary = null;
-        state = ViewState.empty;
-      } else {
-        summary = DashboardSummary(
-          totalPublications: total,
-          averageCitations: averageCitations(topCited),
-          mostActiveYear: mostActiveYear(years),
-          topJournal: topDisplayName(journals),
-          topAuthor: topDisplayName(authors),
-          mostInfluential: topCited.isEmpty ? null : topCited.first,
-        );
-        state = ViewState.success;
-      }
+      final page = await _service.discoverWorks(
+        query: query.isEmpty ? null : query,
+        subfieldId: subfieldId,
+        sourceIds: follows,
+        sort: sort,
+        windowDays: _risingWindowDays,
+        perPage: pageSize,
+      );
+      works = page.works;
+      _nextCursor = page.nextCursor;
+      state = works.isEmpty ? ViewState.empty : ViewState.success;
     } on OpenAlexException catch (e) {
       errorMessage = e.message;
       state = ViewState.error;
@@ -114,15 +159,68 @@ class HomeViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> retry() => search(lastQuery);
+  Future<void> refresh() => load();
 
-  /// Builds the dashboard PDF for the current overview, saves it locally (so it
-  /// can be shared with no backend), and best-effort uploads it to Firebase
-  /// Storage under [uid] (populating [reportUrl] when Storage is available).
+  Future<void> retry() => load();
+
+  Future<void> setSort(WorkSort value) async {
+    if (value == sort) return;
+    sort = value;
+    await load();
+  }
+
+  Future<void> search(String value) async {
+    final q = value.trim();
+    if (q == query && state != ViewState.idle) return;
+    query = q;
+    await load();
+  }
+
+  Future<void> clearSearch() async {
+    if (query.isEmpty) return;
+    query = '';
+    await load();
+  }
+
+  Future<void> setSubfield(String? id) async {
+    final next = (id == null || id.isEmpty) ? null : id;
+    if (next == subfieldId && state != ViewState.idle) return;
+    subfieldId = next;
+    await load();
+  }
+
+  /// Appends the next page, threading the OpenAlex cursor. No-op when a load is
+  /// in flight, when the feed is exhausted, or before the first page.
+  Future<void> loadMore() async {
+    if (loadingMore || !hasMore || state != ViewState.success) return;
+    loadingMore = true;
+    notifyListeners();
+
+    try {
+      final page = await _service.discoverWorks(
+        query: query.isEmpty ? null : query,
+        subfieldId: subfieldId,
+        sourceIds: _appliedFollows ?? const <String>[],
+        sort: sort,
+        windowDays: _risingWindowDays,
+        perPage: pageSize,
+        cursor: _nextCursor,
+      );
+      works = [...works, ...page.works];
+      _nextCursor = page.nextCursor;
+    } catch (_) {
+      // Keep the pages already loaded; the next scroll can retry.
+    }
+
+    loadingMore = false;
+    notifyListeners();
+  }
+
+  /// Builds a report PDF of the current feed, saves it locally (share sheet, no
+  /// backend needed) and best-effort uploads it to Firebase Storage under [uid].
   /// Fires the `export_pdf` analytics event. Task 8.3.
   Future<void> exportReport({required String uid}) async {
-    final s = summary;
-    if (s == null || isExporting) return;
+    if (!canExport || isExporting) return;
 
     isExporting = true;
     exportError = null;
@@ -131,28 +229,16 @@ class HomeViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final bytes = await buildDashboardReportPdf(
-        topic: lastQuery,
-        totalPublications: s.totalPublications,
-        averageCitations: s.averageCitations,
-        mostActiveYear: s.mostActiveYear,
-        topJournal: s.topJournal,
-        topAuthor: s.topAuthor,
-        mostInfluentialTitle: s.mostInfluential?.title,
-        years: yearCounts,
-        trendLabel: trendClassification?.category.name,
-      );
-      final slug = lastQuery.isEmpty
-          ? 'report'
-          : lastQuery.replaceAll(RegExp(r'[^A-Za-z0-9]+'), '_');
+      final label = query.isEmpty ? 'Discover feed' : query;
+      final bytes = await buildRecentPapersReportPdf(field: label, works: works);
+      final slug = query.isEmpty
+          ? 'discover'
+          : query.replaceAll(RegExp(r'[^A-Za-z0-9]+'), '_');
       final fileName =
           'report_${slug}_${DateTime.now().millisecondsSinceEpoch}.pdf';
 
-      // Primary path: save locally for the OS share sheet (no billing needed).
       reportFilePath = await _saveReport(bytes, fileName);
 
-      // Bonus path: upload to Storage if it's configured/enabled. Failures here
-      // (e.g. Storage not provisioned) never fail the export.
       final storage = _storage;
       if (storage != null) {
         try {
@@ -166,7 +252,7 @@ class HomeViewModel extends ChangeNotifier {
         }
       }
 
-      _analytics?.logExportPdf(lastQuery).ignore();
+      _analytics?.logExportPdf(label).ignore();
     } catch (_) {
       exportError = 'Failed to export the report. Please try again.';
     }

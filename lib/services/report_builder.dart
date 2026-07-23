@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show compute;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
@@ -102,6 +103,111 @@ Future<Uint8List> buildDashboardReportPdf({
             headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
           ),
         ],
+      ],
+    ),
+  );
+
+  return doc.save();
+}
+
+/// Plain, isolate-sendable input for [renderRecentPapersReportPdf].
+class RecentPapersReportData {
+  const RecentPapersReportData({
+    required this.field,
+    required this.rows,
+    required this.generatedAt,
+  });
+
+  final String field;
+
+  /// One row per paper: `[title, authors, year, venue]`, already ASCII-safe.
+  final List<List<String>> rows;
+
+  final DateTime generatedAt;
+}
+
+/// Builds a "recent publications" PDF (Phase 13.2) — the Home export.
+///
+/// Rendering a PDF is CPU-heavy and would jank the UI if it ran on the main
+/// isolate, so the rows are prepared here (cheap) and the actual render is
+/// handed to a background isolate via [compute].
+Future<Uint8List> buildRecentPapersReportPdf({
+  required String field,
+  required List<Work> works,
+  DateTime? generatedAt,
+}) {
+  const na = 'N/A';
+  final rows = works
+      .take(40)
+      .map(
+        (w) => <String>[
+          _ascii(w.title) ?? na,
+          _ascii(w.authorNames) ?? na,
+          w.publicationYear?.toString() ?? na,
+          _ascii(w.journalName) ?? na,
+        ],
+      )
+      .toList();
+
+  return compute(
+    renderRecentPapersReportPdf,
+    RecentPapersReportData(
+      field: _ascii(field) ?? na,
+      rows: rows,
+      generatedAt: generatedAt ?? DateTime.now(),
+    ),
+  );
+}
+
+/// Renders the recent-papers PDF. Top-level so it can run on a background
+/// isolate via [compute] — never call this on the UI isolate directly.
+Future<Uint8List> renderRecentPapersReportPdf(
+  RecentPapersReportData data,
+) async {
+  final doc = pw.Document();
+  final now = data.generatedAt;
+  final rows = data.rows;
+  final field = data.field;
+
+  doc.addPage(
+    pw.MultiPage(
+      pageTheme: pw.PageTheme(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(32),
+      ),
+      build: (context) => [
+        pw.Header(
+          level: 0,
+          child: pw.Text(
+            'Journal Trend Analyzer - Recent Publications',
+            style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold),
+          ),
+        ),
+        pw.Text(
+          'Field: $field',
+          style: const pw.TextStyle(fontSize: 14),
+        ),
+        pw.SizedBox(height: 4),
+        pw.Text(
+          'Generated: ${_formatDate(now)}',
+          style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
+        ),
+        pw.SizedBox(height: 20),
+        if (rows.isEmpty)
+          pw.Text('No recent publications found.')
+        else
+          pw.TableHelper.fromTextArray(
+            headers: const ['Title', 'Authors', 'Year', 'Venue'],
+            data: rows,
+            headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+            cellAlignment: pw.Alignment.centerLeft,
+            columnWidths: {
+              0: const pw.FlexColumnWidth(3),
+              1: const pw.FlexColumnWidth(2),
+              2: const pw.FlexColumnWidth(0.7),
+              3: const pw.FlexColumnWidth(1.6),
+            },
+          ),
       ],
     ),
   );

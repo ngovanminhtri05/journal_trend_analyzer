@@ -1,6 +1,7 @@
 import 'author.dart';
 import 'group_by_item.dart';
 import 'source.dart';
+import 'source_hit.dart';
 import 'work.dart';
 
 /// The kind of entity a [Bookmark] points at (FR-10).
@@ -58,6 +59,14 @@ class Bookmark {
     id: item.key,
     displayName: item.keyDisplayName,
     worksCount: item.count,
+  );
+
+  /// A journal bookmark from a `/sources` search hit (Phase 13.3).
+  factory Bookmark.fromSource(SourceHit source) => Bookmark(
+    type: BookmarkType.journal,
+    id: source.id,
+    displayName: source.displayName,
+    worksCount: source.worksCount,
   );
 
   Map<String, dynamic> toJson() => {
