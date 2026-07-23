@@ -30,6 +30,16 @@ class _FakeMessaging implements MessagingApi {
   @override
   Future<AppNotification?> initialMessage() async => null;
 
+  final subscribedUsers = <String>[];
+  final unsubscribedUsers = <String>[];
+
+  @override
+  Future<void> subscribeToUser(String uid) async => subscribedUsers.add(uid);
+
+  @override
+  Future<void> unsubscribeFromUser(String uid) async =>
+      unsubscribedUsers.add(uid);
+
   void dispose() {
     _controller.close();
     _openedController.close();

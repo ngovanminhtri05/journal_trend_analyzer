@@ -51,6 +51,12 @@ describe("listReportsHandler", () => {
     });
   });
 
+  it("scopes to one user's folder when a uid is given", async () => {
+    getFiles.mockResolvedValue([[]]);
+    await listReportsHandler({ uid: "u1" }, adminAuth);
+    expect(getFiles).toHaveBeenCalledWith({ prefix: "reports/u1/" });
+  });
+
   it("rejects a non-admin caller", async () => {
     await expect(
       listReportsHandler({}, { uid: "u1", token: {} })

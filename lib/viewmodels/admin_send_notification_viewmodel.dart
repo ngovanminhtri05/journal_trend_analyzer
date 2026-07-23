@@ -3,12 +3,16 @@ import 'package:flutter/foundation.dart';
 import '../firebase/admin_messaging_service.dart';
 import '../firebase/admin_users_service.dart' show AdminException;
 
-/// Drives the admin Send-Notification screen: compose a title + message and
-/// broadcast it to every user via the `adminSendNotification` Cloud Function.
+/// Drives the admin Send-Notification screen. With no [targetUid] it broadcasts
+/// to every user; with a [targetUid] it notifies just that user (used from the
+/// admin user-detail screen).
 class AdminSendNotificationViewModel extends ChangeNotifier {
-  AdminSendNotificationViewModel(this._api);
+  AdminSendNotificationViewModel(this._api, {this.targetUid});
 
   final AdminMessagingApi _api;
+
+  /// When set, [send] targets this single user instead of broadcasting.
+  final String? targetUid;
 
   bool sending = false;
   String? errorMessage;
@@ -32,7 +36,12 @@ class AdminSendNotificationViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _api.sendBroadcast(title: t, body: b);
+      final uid = targetUid;
+      if (uid != null) {
+        await _api.sendToUser(uid: uid, title: t, body: b);
+      } else {
+        await _api.sendBroadcast(title: t, body: b);
+      }
       sent = true;
     } on AdminException catch (e) {
       errorMessage = e.message;

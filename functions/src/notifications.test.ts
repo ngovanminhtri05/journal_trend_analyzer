@@ -6,7 +6,12 @@ jest.mock("firebase-admin", () => ({
   messaging: () => ({ send }),
 }));
 
-import { sendNotificationHandler, BROADCAST_TOPIC } from "./notifications";
+import {
+  sendNotificationHandler,
+  sendNotificationToUserHandler,
+  BROADCAST_TOPIC,
+  userTopic,
+} from "./notifications";
 
 const adminAuth = { uid: "admin1", token: { admin: true } };
 
@@ -53,6 +58,42 @@ describe("sendNotificationHandler", () => {
   it("rejects a non-admin caller", async () => {
     await expect(
       sendNotificationHandler({ title: "a", body: "b" }, { uid: "u1", token: {} })
+    ).rejects.toThrow(HttpsError);
+    expect(send).not.toHaveBeenCalled();
+  });
+});
+
+describe("sendNotificationToUserHandler", () => {
+  it("sends to the target user's per-user topic", async () => {
+    send.mockResolvedValue("id");
+
+    await sendNotificationToUserHandler(
+      { uid: "u1", title: "Hi", body: "there" },
+      adminAuth
+    );
+
+    expect(send).toHaveBeenCalledWith({
+      topic: userTopic("u1"),
+      notification: { title: "Hi", body: "there" },
+    });
+  });
+
+  it("rejects when uid, title, or body is missing", async () => {
+    await expect(
+      sendNotificationToUserHandler({ title: "a", body: "b" }, adminAuth)
+    ).rejects.toThrow(HttpsError);
+    await expect(
+      sendNotificationToUserHandler({ uid: "u1", body: "b" }, adminAuth)
+    ).rejects.toThrow(HttpsError);
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it("rejects a non-admin caller", async () => {
+    await expect(
+      sendNotificationToUserHandler(
+        { uid: "u1", title: "a", body: "b" },
+        { uid: "u2", token: {} }
+      )
     ).rejects.toThrow(HttpsError);
     expect(send).not.toHaveBeenCalled();
   });

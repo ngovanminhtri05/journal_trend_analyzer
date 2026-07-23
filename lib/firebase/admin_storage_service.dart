@@ -26,7 +26,8 @@ class AdminReportFile {
 
 /// Contract for the admin Storage (reports) Cloud Functions.
 abstract interface class AdminStorageApi {
-  Future<List<AdminReportFile>> listReports();
+  /// Lists uploaded reports; scoped to one user's folder when [uid] is given.
+  Future<List<AdminReportFile>> listReports({String? uid});
   Future<String> getReportUrl(String path);
   Future<void> deleteReport(String path);
 }
@@ -40,11 +41,11 @@ class AdminStorageService implements AdminStorageApi {
   FirebaseFunctions get _functions => _injected ?? FirebaseFunctions.instance;
 
   @override
-  Future<List<AdminReportFile>> listReports() async {
+  Future<List<AdminReportFile>> listReports({String? uid}) async {
     try {
       final result = await _functions
           .httpsCallable('adminListReports')
-          .call<dynamic>();
+          .call<dynamic>({'uid': ?uid});
       final data = Map<String, dynamic>.from(result.data as Map);
       return (data['reports'] as List)
           .map(

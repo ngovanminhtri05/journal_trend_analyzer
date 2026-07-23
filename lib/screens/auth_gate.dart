@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../firebase/admin_access_service.dart';
 import '../firebase/analytics_service.dart';
 import '../firebase/auth_service.dart';
+import '../firebase/messaging_service.dart';
 import '../viewmodels/auth_viewmodel.dart';
 import 'home_shell.dart';
 import 'login_screen.dart';
@@ -29,6 +30,7 @@ class AuthGate extends StatelessWidget {
         auth ?? AuthService(),
         analytics: context.read<AnalyticsApi?>(),
         adminAccess: context.read<AdminAccessApi?>(),
+        messaging: context.read<MessagingApi?>(),
       ),
       child: Consumer<AuthViewModel>(
         builder: (context, vm, _) {

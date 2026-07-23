@@ -54,6 +54,14 @@ abstract interface class MessagingApi {
   /// The message (if any) that launched the app from a terminated state by the
   /// user tapping a notification.
   Future<AppNotification?> initialMessage();
+
+  /// Subscribes this install to a signed-in user's personal push topic, so an
+  /// admin can notify just that user (see `adminSendNotificationToUser`).
+  Future<void> subscribeToUser(String uid);
+
+  /// Reverses [subscribeToUser] (e.g. on sign-out), so a later user on the same
+  /// device does not receive the previous user's targeted pushes.
+  Future<void> unsubscribeFromUser(String uid);
 }
 
 /// Firebase-backed [MessagingApi]. [FirebaseMessaging.instance] is resolved
@@ -90,5 +98,24 @@ class MessagingService implements MessagingApi {
   Future<AppNotification?> initialMessage() async {
     final message = await _messaging.getInitialMessage();
     return message == null ? null : AppNotification.fromRemote(message);
+  }
+
+  /// Per-user FCM topic (mirrors the Cloud Function's `user_<uid>`).
+  static String userTopic(String uid) => 'user_$uid';
+
+  @override
+  Future<void> subscribeToUser(String uid) async {
+    if (uid.isEmpty) return;
+    try {
+      await _messaging.subscribeToTopic(userTopic(uid));
+    } catch (_) {}
+  }
+
+  @override
+  Future<void> unsubscribeFromUser(String uid) async {
+    if (uid.isEmpty) return;
+    try {
+      await _messaging.unsubscribeFromTopic(userTopic(uid));
+    } catch (_) {}
   }
 }

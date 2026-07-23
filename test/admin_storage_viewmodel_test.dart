@@ -8,8 +8,11 @@ class _FakeAdminStorageApi implements AdminStorageApi {
   Object? error;
   final List<String> deleted = [];
 
+  String? lastUid;
+
   @override
-  Future<List<AdminReportFile>> listReports() async {
+  Future<List<AdminReportFile>> listReports({String? uid}) async {
+    lastUid = uid;
     if (error != null) throw error!;
     return reports;
   }

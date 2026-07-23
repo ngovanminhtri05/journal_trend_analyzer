@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:journal_trend_analyzer/firebase/admin_access_service.dart';
 import 'package:journal_trend_analyzer/firebase/app_user.dart';
 import 'package:journal_trend_analyzer/firebase/auth_service.dart';
+import 'package:journal_trend_analyzer/firebase/messaging_service.dart';
 import 'package:journal_trend_analyzer/viewmodels/auth_viewmodel.dart';
 
 /// In-memory [AuthApi] so the ViewModel can be tested with no Firebase.
@@ -33,6 +34,25 @@ class _FakeAuthApi implements AuthApi {
   Future<void> signOut() async => didSignOut = true;
 
   void dispose() => _controller.close();
+}
+
+/// Minimal [MessagingApi] recording per-user topic (un)subscriptions.
+class _FakeMessaging implements MessagingApi {
+  final subscribed = <String>[];
+  final unsubscribed = <String>[];
+
+  @override
+  Future<void> subscribeToUser(String uid) async => subscribed.add(uid);
+  @override
+  Future<void> unsubscribeFromUser(String uid) async => unsubscribed.add(uid);
+  @override
+  Future<String?> initialize() async => null;
+  @override
+  Stream<AppNotification> get onMessage => const Stream.empty();
+  @override
+  Stream<AppNotification> get onMessageOpenedApp => const Stream.empty();
+  @override
+  Future<AppNotification?> initialMessage() async => null;
 }
 
 const _ada = AppUser(uid: 'u1', displayName: 'Ada', email: 'ada@example.com');
@@ -167,6 +187,26 @@ void main() {
       api.emit(null);
       await Future<void>.delayed(Duration.zero);
       expect(vm.isAdmin, isFalse);
+    });
+  });
+
+  group('AuthViewModel per-user push topic', () {
+    test('subscribes on sign-in and unsubscribes on sign-out', () async {
+      final api = _FakeAuthApi();
+      final messaging = _FakeMessaging();
+      final vm = AuthViewModel(api, messaging: messaging);
+      addTearDown(() {
+        vm.dispose();
+        api.dispose();
+      });
+
+      api.emit(_ada);
+      await Future<void>.delayed(Duration.zero);
+      expect(messaging.subscribed, ['u1']);
+
+      api.emit(null);
+      await Future<void>.delayed(Duration.zero);
+      expect(messaging.unsubscribed, ['u1']);
     });
   });
 }

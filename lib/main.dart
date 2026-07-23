@@ -164,6 +164,7 @@ class _JournalTrendAppState extends State<JournalTrendApp> {
         ListenableProvider<RemoteConfigApi>.value(value: _remoteConfig),
         Provider<CrashReporterApi>.value(value: _crashReporter),
         Provider<AdminAccessApi>.value(value: _adminAccess),
+        Provider<MessagingApi>.value(value: _messaging),
         ChangeNotifierProvider(create: (_) => FilterProvider(_service)),
         ChangeNotifierProvider(create: (_) => SearchProvider(_service)),
         ChangeNotifierProvider(create: (_) => TrendProvider(_service)),

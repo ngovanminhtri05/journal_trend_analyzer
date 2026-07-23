@@ -7,9 +7,12 @@ import 'view_state.dart';
 /// Drives the admin Storage screen: browse/download/delete uploaded reports
 /// across all users.
 class AdminStorageViewModel extends ChangeNotifier {
-  AdminStorageViewModel(this._api);
+  AdminStorageViewModel(this._api, {this.uid});
 
   final AdminStorageApi _api;
+
+  /// When set, only this user's reports are listed (admin user-detail screen).
+  final String? uid;
 
   ViewState state = ViewState.idle;
   String? errorMessage;
@@ -21,7 +24,7 @@ class AdminStorageViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      reports = await _api.listReports();
+      reports = await _api.listReports(uid: uid);
       state = reports.isEmpty ? ViewState.empty : ViewState.success;
     } on AdminException catch (e) {
       errorMessage = e.message;

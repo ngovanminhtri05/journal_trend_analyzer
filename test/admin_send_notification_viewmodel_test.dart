@@ -6,6 +6,7 @@ import 'package:journal_trend_analyzer/viewmodels/admin_send_notification_viewmo
 
 class _FakeApi implements AdminMessagingApi {
   (String, String)? lastSent;
+  (String, String, String)? lastSentToUser;
   Object? error;
 
   @override
@@ -15,6 +16,16 @@ class _FakeApi implements AdminMessagingApi {
   }) async {
     if (error != null) throw error!;
     lastSent = (title, body);
+  }
+
+  @override
+  Future<void> sendToUser({
+    required String uid,
+    required String title,
+    required String body,
+  }) async {
+    if (error != null) throw error!;
+    lastSentToUser = (uid, title, body);
   }
 }
 
@@ -51,6 +62,17 @@ void main() {
 
       expect(vm.sent, isFalse);
       expect(vm.errorMessage, 'nope');
+    });
+
+    test('with a targetUid it notifies just that user', () async {
+      final api = _FakeApi();
+      final vm = AdminSendNotificationViewModel(api, targetUid: 'u1');
+
+      await vm.send(title: 'Hi', body: 'there');
+
+      expect(api.lastSentToUser, ('u1', 'Hi', 'there'));
+      expect(api.lastSent, isNull);
+      expect(vm.sent, isTrue);
     });
   });
 }

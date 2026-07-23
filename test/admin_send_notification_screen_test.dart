@@ -14,6 +14,15 @@ class _FakeApi implements AdminMessagingApi {
   }) async {
     lastSent = (title, body);
   }
+
+  @override
+  Future<void> sendToUser({
+    required String uid,
+    required String title,
+    required String body,
+  }) async {
+    lastSent = (title, body);
+  }
 }
 
 void main() {

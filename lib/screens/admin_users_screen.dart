@@ -5,6 +5,7 @@ import '../firebase/admin_users_service.dart';
 import '../viewmodels/admin_users_viewmodel.dart';
 import '../viewmodels/view_state.dart';
 import '../widgets/widgets.dart';
+import 'admin_user_detail_screen.dart';
 
 /// Admin Users screen: list every account, disable/enable, or delete it.
 class AdminUsersScreen extends StatelessWidget {
@@ -62,6 +63,13 @@ class _UserTile extends StatelessWidget {
     final busy = vm.isBusy(user.uid);
     return Card(
       child: ListTile(
+        onTap: busy
+            ? null
+            : () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => AdminUserDetailScreen(user: user),
+                ),
+              ),
         leading: Icon(
           user.isAdmin ? Icons.shield_outlined : Icons.person_outline,
         ),

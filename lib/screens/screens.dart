@@ -8,6 +8,7 @@ export 'admin_dashboard_screen.dart';
 export 'admin_logs_screen.dart';
 export 'admin_remote_config_screen.dart';
 export 'admin_send_notification_screen.dart';
+export 'admin_user_detail_screen.dart';
 export 'admin_storage_screen.dart';
 export 'admin_users_screen.dart';
 export 'auth_gate.dart';

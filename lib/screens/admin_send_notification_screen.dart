@@ -6,10 +6,17 @@ import '../viewmodels/admin_send_notification_viewmodel.dart';
 /// Admin Send-Notification screen: compose a title + message and broadcast it to
 /// every user — the in-app replacement for Firebase Console → Messaging.
 class AdminSendNotificationScreen extends StatefulWidget {
-  const AdminSendNotificationScreen({super.key, this.viewModel});
+  const AdminSendNotificationScreen({
+    super.key,
+    this.viewModel,
+    this.recipientLabel,
+  });
 
   /// Injected for tests; production builds the Cloud-Functions-backed model.
   final AdminSendNotificationViewModel? viewModel;
+
+  /// Name of a single recipient (user-detail screen). Null → broadcast to all.
+  final String? recipientLabel;
 
   @override
   State<AdminSendNotificationScreen> createState() =>
@@ -41,8 +48,9 @@ class _AdminSendNotificationScreenState
     if (_vm.sent) {
       _title.clear();
       _body.clear();
+      final where = widget.recipientLabel ?? 'all users';
       messenger.showSnackBar(
-        const SnackBar(content: Text('Notification sent to all users.')),
+        SnackBar(content: Text('Notification sent to $where.')),
       );
     } else if (_vm.errorMessage != null) {
       messenger.showSnackBar(SnackBar(content: Text(_vm.errorMessage!)));
@@ -59,7 +67,9 @@ class _AdminSendNotificationScreenState
           padding: const EdgeInsets.all(16),
           children: [
             Text(
-              'Broadcast a push notification to every user of the app.',
+              widget.recipientLabel == null
+                  ? 'Broadcast a push notification to every user of the app.'
+                  : 'Send a push notification to ${widget.recipientLabel}.',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 16),
@@ -94,7 +104,13 @@ class _AdminSendNotificationScreenState
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.send),
-              label: Text(_vm.sending ? 'Sending…' : 'Send to all users'),
+              label: Text(
+                _vm.sending
+                    ? 'Sending…'
+                    : (widget.recipientLabel == null
+                          ? 'Send to all users'
+                          : 'Send'),
+              ),
               style: FilledButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 14),
               ),

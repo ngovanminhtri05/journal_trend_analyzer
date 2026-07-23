@@ -6,6 +6,7 @@ import '../firebase/admin_access_service.dart';
 import '../firebase/analytics_service.dart';
 import '../firebase/auth_service.dart';
 import '../firebase/app_user.dart';
+import '../firebase/messaging_service.dart';
 
 /// High-level auth state the router (auth gate) switches on.
 ///
@@ -24,15 +25,22 @@ class AuthViewModel extends ChangeNotifier {
     this._auth, {
     AnalyticsApi? analytics,
     AdminAccessApi? adminAccess,
+    MessagingApi? messaging,
   }) : _analytics = analytics,
-       _adminAccess = adminAccess {
+       _adminAccess = adminAccess,
+       _messaging = messaging {
     _sub = _auth.authStateChanges.listen(_onUserChanged);
   }
 
   final AuthApi _auth;
   final AnalyticsApi? _analytics;
   final AdminAccessApi? _adminAccess;
+  final MessagingApi? _messaging;
   late final StreamSubscription<AppUser?> _sub;
+
+  /// The uid currently subscribed to its per-user push topic, so we can
+  /// unsubscribe it when the user changes.
+  String? _pushUid;
 
   AuthStatus status = AuthStatus.unknown;
   AppUser? user;
@@ -87,7 +95,18 @@ class AuthViewModel extends ChangeNotifier {
     } else {
       unawaited(_refreshAdminStatus());
     }
+    _syncPushTopic(next?.uid);
     notifyListeners();
+  }
+
+  /// Keeps the per-user push topic in sync with the signed-in user: unsubscribe
+  /// the old uid, subscribe the new one. No-op without a [MessagingApi].
+  void _syncPushTopic(String? uid) {
+    final messaging = _messaging;
+    if (messaging == null || _pushUid == uid) return;
+    if (_pushUid != null) unawaited(messaging.unsubscribeFromUser(_pushUid!));
+    if (uid != null) unawaited(messaging.subscribeToUser(uid));
+    _pushUid = uid;
   }
 
   Future<void> _refreshAdminStatus() async {

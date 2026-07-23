@@ -14,11 +14,14 @@ function assertReportsPath(path: string | undefined): asserts path is string {
 }
 
 export async function listReportsHandler(
-  _data: unknown,
+  data: { uid?: string },
   auth: CallableAuth | undefined
 ) {
   requireAdmin(auth);
-  const [files] = await admin.storage().bucket().getFiles({ prefix: "reports/" });
+  // Scope to one user's folder when a uid is given, else list all reports.
+  const uid = data?.uid?.trim();
+  const prefix = uid ? `reports/${uid}/` : "reports/";
+  const [files] = await admin.storage().bucket().getFiles({ prefix });
   return {
     reports: files.map((file: any) => ({
       path: file.name as string,

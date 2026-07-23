@@ -12,7 +12,7 @@ class _FakeApi implements AdminStorageApi {
   final deleted = <String>[];
 
   @override
-  Future<List<AdminReportFile>> listReports() async => _reports;
+  Future<List<AdminReportFile>> listReports({String? uid}) async => _reports;
 
   @override
   Future<String> getReportUrl(String path) async => 'https://example/$path';
