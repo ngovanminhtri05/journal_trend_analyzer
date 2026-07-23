@@ -6,7 +6,6 @@ import 'package:journal_trend_analyzer/viewmodels/view_state.dart';
 
 class _FakeAdminLogsApi implements AdminLogsApi {
   List<AdminEventLog> events = const [];
-  List<AdminCrashLog> crashes = const [];
   Object? error;
 
   @override
@@ -14,27 +13,14 @@ class _FakeAdminLogsApi implements AdminLogsApi {
     if (error != null) throw error!;
     return events;
   }
-
-  @override
-  Future<List<AdminCrashLog>> recentCrashes({int limit = 100}) async {
-    if (error != null) throw error!;
-    return crashes;
-  }
 }
 
 void main() {
   group('AdminLogsViewModel', () {
-    test('loads events and crashes together', () async {
+    test('loads the recent events', () async {
       final api = _FakeAdminLogsApi()
         ..events = [
           AdminEventLog(uid: 'u1', name: 'login', timestamp: DateTime(2026)),
-        ]
-        ..crashes = [
-          AdminCrashLog(
-            uid: 'u1',
-            message: 'boom',
-            timestamp: DateTime(2026),
-          ),
         ];
       final vm = AdminLogsViewModel(api);
 
@@ -42,10 +28,9 @@ void main() {
 
       expect(vm.state, ViewState.success);
       expect(vm.events, hasLength(1));
-      expect(vm.crashes, hasLength(1));
     });
 
-    test('reports empty when both lists are empty', () async {
+    test('reports empty when there are no events', () async {
       final vm = AdminLogsViewModel(_FakeAdminLogsApi());
 
       await vm.load();

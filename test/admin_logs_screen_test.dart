@@ -10,7 +10,6 @@ class _FakeApi implements AdminLogsApi {
   _FakeApi({this.events = const [], this.error});
 
   final List<AdminEventLog> events;
-  final List<AdminCrashLog> crashes = const [];
   final Object? error;
 
   @override
@@ -18,16 +17,10 @@ class _FakeApi implements AdminLogsApi {
     if (error != null) throw error!;
     return events;
   }
-
-  @override
-  Future<List<AdminCrashLog>> recentCrashes({int limit = 100}) async {
-    if (error != null) throw error!;
-    return crashes;
-  }
 }
 
 void main() {
-  testWidgets('renders a mirrored event on the Events tab', (tester) async {
+  testWidgets('renders a mirrored event', (tester) async {
     final vm = AdminLogsViewModel(
       _FakeApi(
         events: [

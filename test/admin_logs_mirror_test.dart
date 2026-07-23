@@ -2,7 +2,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:journal_trend_analyzer/firebase/admin_logs_mirror.dart';
 import 'package:journal_trend_analyzer/firebase/analytics_service.dart';
-import 'package:journal_trend_analyzer/firebase/crash_reporter_service.dart';
 import 'package:mocktail/mocktail.dart';
 
 class _MockFirebaseAuth extends Mock implements FirebaseAuth {}
@@ -27,18 +26,6 @@ class _RecordingAnalytics implements AnalyticsApi {
   Future<void> logExportPdf(String topic) async {}
   @override
   Future<void> logLogout() async {}
-}
-
-class _RecordingCrashReporter implements CrashReporterApi {
-  int handledErrors = 0;
-
-  @override
-  Future<void> recordError(Object error, StackTrace? stack, {String? reason}) async =>
-      handledErrors++;
-  @override
-  Future<void> log(String message) async {}
-  @override
-  void forceCrash() {}
 }
 
 void main() {
@@ -100,31 +87,6 @@ void main() {
       await mirroring.logLogin();
 
       expect(inner.logins, 1);
-    });
-  });
-
-  group('MirroringCrashReporter', () {
-    test('forwards to the inner reporter and mirrors when signed in', () async {
-      final auth = _MockFirebaseAuth();
-      final user = _MockUser();
-      when(() => auth.currentUser).thenReturn(user);
-      when(() => user.uid).thenReturn('u1');
-      final inner = _RecordingCrashReporter();
-      final written = <MapEntry<String, Map<String, dynamic>>>[];
-      final mirroring = MirroringCrashReporter(
-        inner,
-        auth: auth,
-        writer: (collection, data) async {
-          written.add(MapEntry(collection, data));
-        },
-      );
-
-      await mirroring.recordError(Exception('boom'), StackTrace.current, reason: 'demo');
-
-      expect(inner.handledErrors, 1);
-      expect(written.single.key, 'admin_crash_reports');
-      expect(written.single.value['uid'], 'u1');
-      expect(written.single.value['reason'], 'demo');
     });
   });
 }

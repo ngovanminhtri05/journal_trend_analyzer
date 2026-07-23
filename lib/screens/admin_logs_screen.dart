@@ -21,18 +21,10 @@ class AdminLogsScreen extends StatelessWidget {
     return ChangeNotifierProvider<AdminLogsViewModel>(
       create: (_) =>
           (viewModel ?? AdminLogsViewModel(AdminLogsService()))..load(),
-      child: DefaultTabController(
-        length: 2,
-        child: Scaffold(
-          appBar: AppBar(
-            title: const Text('Logs'),
-            bottom: const TabBar(
-              tabs: [Tab(text: 'Events'), Tab(text: 'Crashes')],
-            ),
-          ),
-          body: Consumer<AdminLogsViewModel>(
-            builder: (context, vm, _) => _buildBody(context, vm),
-          ),
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Logs')),
+        body: Consumer<AdminLogsViewModel>(
+          builder: (context, vm, _) => _buildBody(context, vm),
         ),
       ),
     );
@@ -49,40 +41,31 @@ class AdminLogsScreen extends StatelessWidget {
           onRetry: vm.retry,
         );
       case ViewState.empty:
-        return const EmptyView(message: 'No events or crashes recorded yet.');
+        return const EmptyView(message: 'No events recorded yet.');
       case ViewState.success:
-        return TabBarView(
-          children: [
-            ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: vm.events.length,
-              itemBuilder: (context, i) {
-                final e = vm.events[i];
-                return Card(
-                  child: ListTile(
-                    leading: const Icon(Icons.event_note_outlined),
-                    title: Text(e.name),
-                    subtitle: Text('${e.uid} • ${e.timestamp}'),
-                  ),
-                );
-              },
-            ),
-            ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: vm.crashes.length,
-              itemBuilder: (context, i) {
-                final c = vm.crashes[i];
-                return Card(
-                  child: ListTile(
-                    leading: const Icon(Icons.report_gmailerrorred_outlined),
-                    title: Text(c.message),
-                    subtitle: Text('${c.uid} • ${c.timestamp}'),
-                  ),
-                );
-              },
-            ),
-          ],
+        return ListView.separated(
+          itemCount: vm.events.length,
+          separatorBuilder: (_, _) => const Divider(height: 1),
+          itemBuilder: (context, i) {
+            final e = vm.events[i];
+            return ListTile(
+              dense: true,
+              visualDensity: VisualDensity.compact,
+              leading: const Icon(Icons.event_note_outlined, size: 20),
+              title: Text(e.name),
+              subtitle: Text('${_shortUid(e.uid)} · ${_time(e.timestamp)}'),
+            );
+          },
         );
     }
   }
+
+  /// Compact `MM-dd HH:mm` (the full ISO string is far too long for a list row).
+  static String _time(DateTime t) {
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${two(t.month)}-${two(t.day)} ${two(t.hour)}:${two(t.minute)}';
+  }
+
+  static String _shortUid(String uid) =>
+      uid.length <= 6 ? uid : uid.substring(0, 6);
 }

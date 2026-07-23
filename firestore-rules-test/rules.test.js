@@ -30,12 +30,6 @@ const eventDoc = (uid) => ({
   timestamp: serverTimestamp(),
   params: {},
 });
-const crashDoc = (uid) => ({
-  uid,
-  message: "boom",
-  reason: "test",
-  timestamp: serverTimestamp(),
-});
 
 beforeAll(async () => {
   testEnv = await initializeTestEnvironment({
@@ -115,26 +109,17 @@ describe("admin_events", () => {
   });
 });
 
-describe("admin_crash_reports", () => {
-  test("a signed-in user can create a crash report for their own uid", async () => {
+describe("everything else is locked down", () => {
+  test("admin_crash_reports is no longer writable (feature removed)", async () => {
     const db = testEnv.authenticatedContext("u1").firestore();
-    await assertSucceeds(
-      setDoc(doc(db, "admin_crash_reports", "c1"), crashDoc("u1"))
+    await assertFails(
+      setDoc(doc(db, "admin_crash_reports", "c1"), {
+        uid: "u1",
+        message: "boom",
+      })
     );
   });
 
-  test("a non-admin cannot read crash reports", async () => {
-    await seed("admin_crash_reports", "c1", {
-      uid: "u1",
-      message: "boom",
-      reason: null,
-    });
-    const db = testEnv.authenticatedContext("u1").firestore();
-    await assertFails(getDoc(doc(db, "admin_crash_reports", "c1")));
-  });
-});
-
-describe("everything else is locked down", () => {
   test("an arbitrary collection denies reads and writes", async () => {
     const db = testEnv
       .authenticatedContext("admin1", { admin: true })

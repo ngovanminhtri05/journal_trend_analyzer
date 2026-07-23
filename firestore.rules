@@ -2,25 +2,17 @@ rules_version = '2';
 
 // Firestore Security Rules (Firebase Admin Panel).
 //
-// Two collections mirror real Analytics/Crashlytics events purely so the in-app
-// admin Logs screen has instant, queryable data (see docs/superpowers/specs/
-// 2026-07-22-firebase-admin-panel-design.md §5.4). Every other Firebase-console-only
-// operation (users, Remote Config, cross-user Storage) goes through Cloud Functions
-// instead, which check the same `admin` custom claim server-side.
+// The `admin_events` collection mirrors real Analytics events purely so the
+// in-app admin Logs screen has instant, queryable data. Every other
+// Firebase-console-only operation (users, Remote Config, cross-user Storage,
+// push) goes through Cloud Functions instead, which check the same `admin`
+// custom claim server-side.
 service cloud.firestore {
   match /databases/{database}/documents {
     match /admin_events/{eventId} {
       allow create: if request.auth != null
         && request.auth.uid == request.resource.data.uid
         && request.resource.data.keys().hasOnly(['uid', 'name', 'timestamp', 'params']);
-      allow read: if request.auth != null && request.auth.token.admin == true;
-      allow update, delete: if false;
-    }
-
-    match /admin_crash_reports/{reportId} {
-      allow create: if request.auth != null
-        && request.auth.uid == request.resource.data.uid
-        && request.resource.data.keys().hasOnly(['uid', 'message', 'reason', 'timestamp']);
       allow read: if request.auth != null && request.auth.token.admin == true;
       allow update, delete: if false;
     }

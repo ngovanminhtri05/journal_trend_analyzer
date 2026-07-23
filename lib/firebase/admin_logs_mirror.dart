@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import 'analytics_service.dart';
-import 'crash_reporter_service.dart';
 
 /// Writes one mirrored record to a Firestore collection. Overridable in tests;
 /// the default targets the real Firestore project.
@@ -93,51 +92,4 @@ class MirroringAnalytics implements AnalyticsApi {
     await _inner.logLogout();
     await _mirror('logout', const {});
   }
-}
-
-/// Decorates a [CrashReporterApi] so every non-fatal [recordError] also writes
-/// a short record to the `admin_crash_reports` Firestore collection. Same
-/// best-effort/offline-safe behavior as [MirroringAnalytics]; [log] and
-/// [forceCrash] pass straight through (there is nothing to mirror before a
-/// forced crash kills the process).
-class MirroringCrashReporter implements CrashReporterApi {
-  MirroringCrashReporter(
-    this._inner, {
-    FirebaseAuth? auth,
-    AdminEventWriter? writer,
-  }) : _authInjected = auth,
-       _writer = writer ?? _defaultWriter;
-
-  final CrashReporterApi _inner;
-  final FirebaseAuth? _authInjected;
-  final AdminEventWriter _writer;
-
-  FirebaseAuth get _auth => _authInjected ?? FirebaseAuth.instance;
-
-  @override
-  Future<void> recordError(
-    Object error,
-    StackTrace? stack, {
-    String? reason,
-  }) async {
-    await _inner.recordError(error, stack, reason: reason);
-    final uid = _auth.currentUser?.uid;
-    if (uid == null) return;
-    try {
-      await _writer('admin_crash_reports', {
-        'uid': uid,
-        'message': error.toString(),
-        'reason': reason,
-        'timestamp': FieldValue.serverTimestamp(),
-      });
-    } catch (_) {
-      // Best-effort mirror only.
-    }
-  }
-
-  @override
-  Future<void> log(String message) => _inner.log(message);
-
-  @override
-  void forceCrash() => _inner.forceCrash();
 }

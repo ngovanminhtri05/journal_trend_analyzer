@@ -134,7 +134,7 @@ class _JournalTrendAppState extends State<JournalTrendApp> {
       widget.remoteConfig ?? RemoteConfigService();
 
   late final CrashReporterApi _crashReporter =
-      widget.crashReporter ?? MirroringCrashReporter(CrashlyticsService());
+      widget.crashReporter ?? CrashlyticsService();
 
   late final AdminAccessApi _adminAccess = AdminAccessService();
 

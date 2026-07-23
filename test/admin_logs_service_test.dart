@@ -62,21 +62,4 @@ void main() {
     expect(events.single.name, 'search_topic');
     expect(events.single.params, {'keyword': 'robotics'});
   });
-
-  test('recentCrashes maps documents into AdminCrashLog', () async {
-    when(() => doc.data()).thenReturn({
-      'uid': 'u1',
-      'message': 'Exception: boom',
-      'reason': 'demo',
-      'timestamp': Timestamp.fromMillisecondsSinceEpoch(0),
-    });
-    final service = AdminLogsService(firestore: db);
-
-    final crashes = await service.recentCrashes();
-
-    verify(() => db.collection('admin_crash_reports')).called(1);
-    expect(crashes.single.uid, 'u1');
-    expect(crashes.single.message, 'Exception: boom');
-    expect(crashes.single.reason, 'demo');
-  });
 }

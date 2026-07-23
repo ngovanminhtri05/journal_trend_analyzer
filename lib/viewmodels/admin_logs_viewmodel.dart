@@ -13,7 +13,6 @@ class AdminLogsViewModel extends ChangeNotifier {
   ViewState state = ViewState.idle;
   String? errorMessage;
   List<AdminEventLog> events = const [];
-  List<AdminCrashLog> crashes = const [];
 
   Future<void> load() async {
     state = ViewState.loading;
@@ -21,15 +20,8 @@ class AdminLogsViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final results = await Future.wait([
-        _api.recentEvents(),
-        _api.recentCrashes(),
-      ]);
-      events = results[0] as List<AdminEventLog>;
-      crashes = results[1] as List<AdminCrashLog>;
-      state = (events.isEmpty && crashes.isEmpty)
-          ? ViewState.empty
-          : ViewState.success;
+      events = await _api.recentEvents();
+      state = events.isEmpty ? ViewState.empty : ViewState.success;
     } on FirebaseException catch (e) {
       // The project has no Firestore database yet — retrying can't help; tell
       // the admin exactly what to do instead of a generic "try again".
