@@ -57,12 +57,12 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // First "Increase" belongs to home_page_size (step 5 → 30).
+    // First "Increase" belongs to home_page_size (step 1 → 26).
     await tester.tap(find.byIcon(Icons.add_circle_outline).first);
     await tester.pumpAndSettle();
 
     expect(api.lastUpdatedKey, 'home_page_size');
-    expect(api.lastUpdatedValue, '30');
-    expect(find.text('30'), findsOneWidget);
+    expect(api.lastUpdatedValue, '26');
+    expect(find.text('26'), findsOneWidget);
   });
 }

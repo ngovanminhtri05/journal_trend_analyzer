@@ -33,7 +33,7 @@ const Map<String, _KnownParam> _known = {
     description: 'Papers loaded per page on the Home feed.',
     min: RemoteConfigService.minHomePageSize,
     max: RemoteConfigService.maxHomePageSize,
-    step: 5,
+    step: 1,
     defaultValue: RemoteConfigService.defaultHomePageSize,
   ),
   RemoteConfigService.keyMaxJournals: _KnownParam(
