@@ -39,11 +39,12 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('home_page_size'), findsOneWidget);
+    // A known tunable renders as a friendly labeled stepper, not a raw key.
+    expect(find.text('Home feed page size'), findsOneWidget);
     expect(find.text('25'), findsOneWidget);
   });
 
-  testWidgets('editing a parameter calls updateParameter with the new value', (
+  testWidgets('the stepper calls updateParameter with the stepped value', (
     tester,
   ) async {
     final api = _FakeApi([
@@ -56,16 +57,12 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('home_page_size'));
-    await tester.pumpAndSettle();
-
-    // The value field is the second TextField in the edit dialog.
-    await tester.enterText(find.byType(TextField).at(1), '50');
-    await tester.tap(find.text('Save'));
+    // First "Increase" belongs to home_page_size (step 5 → 30).
+    await tester.tap(find.byIcon(Icons.add_circle_outline).first);
     await tester.pumpAndSettle();
 
     expect(api.lastUpdatedKey, 'home_page_size');
-    expect(api.lastUpdatedValue, '50');
-    expect(find.text('50'), findsOneWidget);
+    expect(api.lastUpdatedValue, '30');
+    expect(find.text('30'), findsOneWidget);
   });
 }
