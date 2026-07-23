@@ -70,6 +70,7 @@ void main() {
 
       expect(api.deleted, [_report.path]);
       expect(vm.reports, isEmpty);
+      expect(vm.state, ViewState.empty);
     });
   });
 }

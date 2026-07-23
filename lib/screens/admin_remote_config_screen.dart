@@ -9,13 +9,18 @@ import '../widgets/widgets.dart';
 /// Admin Remote Config screen: view every parameter and edit its default
 /// value — the in-app replacement for hand-editing values in the console.
 class AdminRemoteConfigScreen extends StatelessWidget {
-  const AdminRemoteConfigScreen({super.key});
+  const AdminRemoteConfigScreen({super.key, this.viewModel});
+
+  /// Injected for tests/previews; production builds the Cloud-Functions-backed
+  /// view model.
+  final AdminRemoteConfigViewModel? viewModel;
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider<AdminRemoteConfigViewModel>(
       create: (_) =>
-          AdminRemoteConfigViewModel(AdminRemoteConfigService())..load(),
+          (viewModel ?? AdminRemoteConfigViewModel(AdminRemoteConfigService()))
+            ..load(),
       child: Scaffold(
         appBar: AppBar(title: const Text('Remote Config')),
         body: Consumer<AdminRemoteConfigViewModel>(

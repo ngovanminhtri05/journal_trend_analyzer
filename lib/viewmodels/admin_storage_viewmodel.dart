@@ -41,6 +41,8 @@ class AdminStorageViewModel extends ChangeNotifier {
     try {
       await _api.deleteReport(path);
       reports = reports.where((r) => r.path != path).toList();
+      // Deleting the last report should show the empty state, not a blank list.
+      if (reports.isEmpty) state = ViewState.empty;
     } on AdminException catch (e) {
       errorMessage = e.message;
     }

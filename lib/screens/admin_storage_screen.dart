@@ -10,12 +10,17 @@ import '../widgets/widgets.dart';
 /// Admin Storage screen: browse, download, or delete uploaded PDF reports
 /// across every user's `reports/{uid}/…` folder.
 class AdminStorageScreen extends StatelessWidget {
-  const AdminStorageScreen({super.key});
+  const AdminStorageScreen({super.key, this.viewModel});
+
+  /// Injected for tests/previews; production builds the Cloud-Functions-backed
+  /// view model.
+  final AdminStorageViewModel? viewModel;
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider<AdminStorageViewModel>(
-      create: (_) => AdminStorageViewModel(AdminStorageService())..load(),
+      create: (_) =>
+          (viewModel ?? AdminStorageViewModel(AdminStorageService()))..load(),
       child: Scaffold(
         appBar: AppBar(title: const Text('Storage')),
         body: Consumer<AdminStorageViewModel>(
