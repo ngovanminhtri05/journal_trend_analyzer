@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 
 import '../firebase/admin_logs_service.dart';
@@ -29,6 +30,14 @@ class AdminLogsViewModel extends ChangeNotifier {
       state = (events.isEmpty && crashes.isEmpty)
           ? ViewState.empty
           : ViewState.success;
+    } on FirebaseException catch (e) {
+      // The project has no Firestore database yet — retrying can't help; tell
+      // the admin exactly what to do instead of a generic "try again".
+      errorMessage = e.code == 'not-found'
+          ? 'Logs need a Firestore database. In the Firebase console, create '
+                'the (default) database, then reopen this screen.'
+          : 'Could not load logs. Please try again.';
+      state = ViewState.error;
     } catch (_) {
       errorMessage = 'Could not load logs. Please try again.';
       state = ViewState.error;

@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:journal_trend_analyzer/firebase/admin_logs_service.dart';
 import 'package:journal_trend_analyzer/viewmodels/admin_logs_viewmodel.dart';
@@ -65,6 +66,17 @@ void main() {
       ];
       await vm.retry();
       expect(vm.state, ViewState.success);
+    });
+
+    test('a missing Firestore database yields an actionable message', () async {
+      final api = _FakeAdminLogsApi()
+        ..error = FirebaseException(plugin: 'cloud_firestore', code: 'not-found');
+      final vm = AdminLogsViewModel(api);
+
+      await vm.load();
+
+      expect(vm.state, ViewState.error);
+      expect(vm.errorMessage, contains('Firestore database'));
     });
   });
 }
