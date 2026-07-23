@@ -10,12 +10,17 @@ import '../widgets/widgets.dart';
 /// §5.4 — real events still go to Firebase Analytics/Crashlytics; this is a
 /// live, queryable mirror for instant in-app viewing).
 class AdminLogsScreen extends StatelessWidget {
-  const AdminLogsScreen({super.key});
+  const AdminLogsScreen({super.key, this.viewModel});
+
+  /// Injected for tests/previews; production builds the Firestore-backed view
+  /// model.
+  final AdminLogsViewModel? viewModel;
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider<AdminLogsViewModel>(
-      create: (_) => AdminLogsViewModel(AdminLogsService())..load(),
+      create: (_) =>
+          (viewModel ?? AdminLogsViewModel(AdminLogsService()))..load(),
       child: DefaultTabController(
         length: 2,
         child: Scaffold(
